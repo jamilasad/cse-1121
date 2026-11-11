@@ -1,0 +1,2296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arrays: Think First</title>
+<style>
+/* ---- the simulator shell, copied from the CSE-2321 course site (assets/sim.css) ---- */
+/* ==========================================================================
+   CSE-2321 · the simulator shell
+   --------------------------------------------------------------------------
+   One frame for every simulator on the site. A page supplies the picture;
+   this file supplies the frame around it, so a student who learns to drive
+   the array simulator in Week 3 can drive the AVL simulator in Week 13.
+
+   Layout follows the "deck": the drawing gets the full width on top, and the
+   instruments (code, watches, narration, controls) sit in a row beneath it.
+   Focus — which only ever runs on a projector — switches to the "bench":
+   one dark surface, larger type, no card seams.
+
+   Every class here is either .sim-scoped or carries a name that no lesson
+   page already uses. Checked against all 21 pages before naming.
+   ========================================================================== */
+
+/* ---------- the frame ---------- */
+.sim{border:1px solid #e8ebfa;border-radius:1rem;background:#fff;margin:1.3rem 0;
+     box-shadow:0 14px 32px -26px rgba(30,27,75,.45),inset 0 1px 0 #fff;overflow:hidden}
+.sim .simhd{display:flex;align-items:center;gap:.7rem;padding:.55rem .85rem;border-bottom:1px solid #eef0f8}
+.sim .simttl{font-size:.5rem;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:#b4bcd8}
+.sim .simnm{font-size:.78rem;font-weight:700;color:#4c5480}
+.sim .focusb{margin-left:auto;appearance:none;font-family:inherit;font-size:.68rem;font-weight:800;
+     color:#7b8199;background:#fff;border:1px solid #e2e6f5;border-radius:.42rem;padding:.28rem .6rem;
+     cursor:pointer;transition:.15s;white-space:nowrap}
+.sim .focusb:hover{border-color:#a5b4fc;color:#4f46e5}
+.sim .simbd{padding:.9rem;display:flex;flex-direction:column;gap:.75rem}
+/* ---------- nothing that changes size may sit above the buttons ----------
+   The watch strip wraps and the narration grows from one line to three, so a
+   control row placed after them walks away from the cursor that is pressing
+   it. The rail and the picture are fixed; the controls follow them, and the
+   two things that breathe go underneath. Markup order stays readable. */
+.sim .simctl{order:1}
+.sim .simwatch{order:2}
+.sim .simmsg{order:3}
+/* and none of them may be squeezed: a flex child that shrinks below its content
+   inside a .sim — which clips its own overflow — is content nobody can reach */
+.sim .simbd > *{flex-shrink:0}
+
+/* ---------- the block the keyboard is pointing at ----------
+   Quiet on purpose: it answers "will n drive this one?" at a glance without
+   competing with anything inside the frame. Never shown while Focus is open,
+   because then there is only one thing on the screen anyway. */
+.sim.simon{border-color:#c7d2fe;box-shadow:0 0 0 2px rgba(79,70,229,.16),
+     0 14px 32px -26px rgba(30,27,75,.45),inset 0 1px 0 #fff}
+body.fsopen .sim.simon{box-shadow:none}
+.fsbody .sim.simon{border:0;box-shadow:none}
+
+/* ---------- the step rail: every step a segment, grouped by loop pass ---------- */
+.simrail{display:flex;gap:2px;align-items:stretch;margin:0;border-radius:.35rem;
+     overflow:hidden;background:#eef2ff;padding:2px}
+.simrail .grp{display:flex;gap:2px;flex:var(--f,1);position:relative;padding-top:13px;min-width:0}
+.simrail .grp::before{content:attr(data-l);position:absolute;top:0;left:0;right:0;text-align:center;
+     font-size:.5rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#a5b4fc;
+     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.simrail .sg{flex:1;min-width:3px;height:9px;border-radius:2px;background:#dbe1ff;cursor:pointer;
+     transition:.18s;border:0;padding:0;appearance:none}
+.simrail .sg:hover{background:#c3ccff}
+.simrail .sg:focus-visible{outline:2px solid #4f46e5;outline-offset:1px}
+.simrail .sg.done{background:#818cf8}
+.simrail .sg.tr{background:#059669}
+.simrail .sg.fl{background:#e11d48}
+.simrail .sg.now{background:#4f46e5;box-shadow:0 0 0 2px rgba(79,70,229,.25)}
+
+/* ---------- the stage ---------- */
+.simboard{position:relative;border:1px solid #e8ebfa;border-radius:.6rem;overflow:auto;
+     background:linear-gradient(180deg,#fff 0%,#fcfdff 55%,#f7f9ff 100%);
+     display:grid;place-items:center;padding:1.15rem .8rem;min-height:150px}
+.simboard > .plate{position:absolute;left:.75rem;top:.5rem;font-size:.5rem;font-weight:800;
+     letter-spacing:.22em;text-transform:uppercase;color:#b4bcd8;pointer-events:none}
+.simboard > .simfig{max-width:100%}
+
+/* ---------- the instrument row under the stage ---------- */
+.simrow{display:grid;gap:.8rem;margin:0;align-items:stretch}
+@media(min-width:900px){
+  .simrow.two{grid-template-columns:1fr 1fr}
+  .simrow.three{grid-template-columns:1.3fr .85fr 1fr}
+}
+.simcol{display:flex;flex-direction:column;gap:.5rem;min-width:0}
+.simcol > .cttl{font-size:.5rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#b4bcd8}
+
+/* ---------- watches: nothing changes without a signal ---------- */
+.simwatch{display:flex;gap:.4rem;flex-wrap:wrap;align-content:flex-start}
+.wch{display:flex;align-items:stretch;border:1px solid #e2e8f0;border-radius:.4rem;overflow:hidden;
+     background:#fff;font-family:var(--mono,ui-monospace,monospace);font-size:.72rem}
+.wch .wn{padding:.22rem .45rem;background:#f8fafc;color:#64748b;font-weight:700;border-right:1px solid #e2e8f0}
+.wch .wv{padding:.22rem .5rem;font-weight:800;color:#1e1b4b;min-width:32px;text-align:center;
+     font-variant-numeric:tabular-nums}
+.wch.chg{border-color:#fcd34d;box-shadow:0 0 0 3px rgba(252,211,77,.28)}
+.wch.chg .wv{background:#fffbeb;color:#b45309}
+.wch.gone .wv{color:#cbd5e1;text-decoration:line-through;text-decoration-color:#fb7185}
+
+/* ---------- narration ---------- */
+.simmsg{display:flex;align-items:flex-start;gap:.7rem;border:1px solid #e8ebfa;border-radius:.5rem;
+     background:#fbfcff;padding:.62rem .8rem;min-height:58px}
+.simmsg .smn{font-family:var(--mono,ui-monospace,monospace);font-size:.66rem;font-weight:800;color:#fff;
+     background:#4f46e5;border-radius:.3rem;padding:.18rem .42rem;flex:0 0 auto;margin-top:.1rem}
+/* ---------- the verdict chip: what the condition on this step came to -----
+   A step carrying `cond` lands on the line that tests something, and the
+   answer is printed here rather than left inside a sentence. The rail segment
+   takes the same two colours, so a finished run reads as a column of greens
+   and reds you can point at.                                              */
+.simmsg .smv{display:none;font-family:var(--mono,ui-monospace,monospace);font-size:.6rem;font-weight:800;
+     letter-spacing:.1em;border-radius:.3rem;padding:.17rem .4rem;flex:0 0 auto;margin-top:.1rem}
+.simmsg .smv.on{display:inline-flex}
+.simmsg .smv.tr{background:#ecfdf5;color:#047857;border:1px solid #6ee7b7}
+.simmsg .smv.fl{background:#fff1f2;color:#be123c;border:1px solid #fda4af}
+.simmsg p{margin:0;font-size:.86rem;line-height:1.55;color:#475569}
+.simmsg p b{color:#1e293b}
+
+/* ---------- controls ---------- */
+.simctl{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;margin:0}
+.simcnt{margin-left:auto;font-family:var(--mono,ui-monospace,monospace);font-size:.72rem;font-weight:800;
+     color:#64748b;font-variant-numeric:tabular-nums}
+.simmeter{display:inline-flex;align-items:center;gap:.45rem;font-size:.68rem;font-weight:800;color:#b45309;
+     background:#fffbeb;border:1px solid #fcd34d;border-radius:.4rem;padding:.2rem .55rem}
+.simmeter b{font-family:var(--mono,ui-monospace,monospace);font-size:.85rem;font-variant-numeric:tabular-nums}
+.simkeys{font-size:.62rem;font-weight:700;color:#b4bcd8;letter-spacing:.04em}
+.simkeys kbd{font-family:var(--mono,ui-monospace,monospace);font-size:.62rem;font-weight:800;color:#7b8199;
+     background:#f4f6fd;border:1px solid #e2e6f5;border-radius:.25rem;padding:0 .25rem}
+
+/* ---------- the cell strip: indexed boxes in a row ---------- */
+.cstrip{display:flex;gap:.3rem;align-items:flex-end;justify-content:center;flex-wrap:nowrap}
+.ccel{width:var(--cw,58px);text-align:center;min-width:0}
+.ccel .cix{font-family:var(--mono,ui-monospace,monospace);font-size:calc(var(--cw,58px)*.132);
+     font-weight:700;color:#94a3b8;margin-bottom:.2rem}
+.ccel .cbx{height:var(--cw,58px);display:grid;place-items:center;border:1px solid #a5b4fc;border-radius:.4rem;
+     background:#fff;font-family:var(--mono,ui-monospace,monospace);font-size:calc(var(--cw,58px)*.32);
+     font-weight:800;color:#1e1b4b;transition:.28s}
+.ccel .cad{font-family:var(--mono,ui-monospace,monospace);font-size:calc(var(--cw,58px)*.118);
+     color:#a5b4fc;margin-top:.18rem}
+.ccel.look .cbx{border-color:#fcd34d;background:#fffbeb;color:#b45309;transform:translateY(-3px)}
+.ccel.hit  .cbx{border-color:#6ee7b7;background:#ecfdf5;color:#047857;box-shadow:0 0 0 3px rgba(110,231,183,.3)}
+.ccel.miss .cbx{color:#cbd5e1;border-color:#e2e8f0}
+.ccel.gone .cbx{opacity:.28}
+.clane{display:flex;gap:.3rem;justify-content:center;margin-top:.5rem}
+.clane .cpin{width:var(--cw,58px);display:grid;place-items:center;height:28px;min-width:0;
+     border:0;background:none;padding:0;margin:0}
+.cpin .ctag{display:inline-flex;align-items:center;gap:.3rem;border:1px solid #fcd34d;background:#fffbeb;
+     border-radius:.35rem;padding:.16rem .4rem;font-family:var(--mono,ui-monospace,monospace);
+     font-size:.62rem;font-weight:800;color:#b45309}
+
+/* ==========================================================================
+   FOCUS — the bench
+   Focus only ever runs on a projector, so it goes to one surface with bigger
+   type: no card seams, and the eye stops jumping between a white drawing and
+   a black listing. It comes in two skins. The dark bench is the default and
+   gives the highest contrast in a lit room; some projectors cannot draw a
+   convincing black, so the ☀ button switches the whole overlay to light and
+   the choice is remembered. Everything that changes SIZE is written once and
+   applies to both; only colour is skinned.
+   ========================================================================== */
+body.fsopen{overflow:hidden}
+.fsov{position:fixed;inset:0;z-index:120;background:#0f172a;display:none;flex-direction:column;
+     padding:.6rem .8rem 1rem}
+.fsov.on{display:flex}
+.fsov .fsbar{display:flex;align-items:center;gap:.4rem;padding:.2rem .1rem .55rem;flex:0 0 auto}
+.fsov .fsnm{font-family:var(--mono,ui-monospace,monospace);font-size:.7rem;font-weight:700;
+     letter-spacing:.16em;text-transform:uppercase;color:#4c5680;margin-right:auto;
+     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fsov .fslt,.fsov .fsx{appearance:none;font-family:inherit;font-size:.78rem;font-weight:800;
+     color:#c3cbe4;background:#1b2238;border:1px solid #2b3554;border-radius:.45rem;
+     padding:.4rem .8rem;cursor:pointer;flex:0 0 auto}
+.fsov .fslt{padding:.4rem .6rem}
+.fsov .fslt:hover,.fsov .fsx:hover{border-color:#8b85f5;color:#fff}
+.fsbody{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:auto}
+/* flex:1 0 auto, not 1 1 auto. The simulator may GROW to fill the overlay, but
+   it must never SHRINK below the size its content needs: .sim clips its own
+   overflow for the rounded corners, so a shrunk one hides the controls and the
+   narration with no way to reach them. At 200% browser zoom that was the whole
+   bottom half of every simulator. Kept at content height, .fsbody scrolls. */
+.fsbody .sim{margin:0;border:0;border-radius:.6rem;box-shadow:none;
+     flex:1 0 auto;display:flex;flex-direction:column;min-height:0}
+.fsbody .simhd{display:none}
+/* `safe center` and not plain `center`: a widget shorter than the bench is
+   centred on it, but one TALLER than the bench falls back to flex-start so
+   its top cannot escape above the scrollable area. Plain centring loses the
+   first rows of a zoomed-in simulator with no way to scroll back to them. */
+.fsbody .simbd{flex:1 0 auto;display:flex;flex-direction:column;min-height:0;padding:.7rem;
+     justify-content:safe center}
+.fsbody .simboard{flex:1 0 auto;min-height:0}
+.fsbody .simrow{flex:0 0 auto}
+
+/* ---- size: both skins. The old Focus shrank the drawing and left the type
+        alone, which is the wrong way round for a room. ---- */
+.fsbody{--cw:112px}
+.fsbody .simmsg{min-height:64px;padding:.7rem .9rem}
+.fsbody .simmsg p{font-size:1.06rem}
+.fsbody .simmsg .smn{font-size:.82rem}
+.fsbody .simmsg .smv{font-size:.74rem;padding:.2rem .5rem}
+.fsbody .wch{font-size:.95rem}
+.fsbody .simcol > .cttl{font-size:.58rem}
+.fsbody .simcnt{font-size:.9rem}
+.fsbody .simboard > .plate{font-size:.62rem}
+.fsbody .simrail .grp::before{font-size:.58rem}
+.fsbody .simrail .sg{height:12px}
+.fsbody .cpin .ctag{font-size:.8rem}
+.fsbody .simmeter{font-size:.82rem}
+.fsbody .simmeter b{font-size:1rem}
+/* the controls sit under the middle of the drawing, not off to one side */
+.fsbody .simctl{justify-content:center}
+.fsbody .simcnt{margin-left:0}
+
+/* ---- colour: the dark bench ---- */
+.fsov:not(.lit) .fsbody .sim{background:#131a2e}
+.fsov:not(.lit) .fsbody .simboard{background:#151c30;border-color:#232b45}
+.fsov:not(.lit) .fsbody .simboard > .plate{color:#4c5680}
+.fsov:not(.lit) .fsbody .simmsg{background:#141a2e;border-color:#232b45}
+.fsov:not(.lit) .fsbody .simmsg p{color:#c3cbe4}
+.fsov:not(.lit) .fsbody .simmsg p b{color:#fff}
+.fsov:not(.lit) .fsbody .simmsg .smv.tr{background:#0d2b24;color:#6ee7b7;border-color:#0f8a67}
+.fsov:not(.lit) .fsbody .simmsg .smv.fl{background:#3b0d1c;color:#fda4af;border-color:#c2295a}
+.fsov:not(.lit) .fsbody .wch{background:#1b2238;border-color:#2b3554}
+.fsov:not(.lit) .fsbody .wch .wn{background:#151c30;color:#6b769c;border-right-color:#2b3554}
+.fsov:not(.lit) .fsbody .wch .wv{color:#e6e9f7}
+/* the "this just changed" flash was written for white paper: pale yellow
+   behind brown text is almost invisible projected onto the dark bench */
+.fsov:not(.lit) .fsbody .wch.chg{border-color:#b45309;box-shadow:0 0 0 3px rgba(180,83,9,.35)}
+.fsov:not(.lit) .fsbody .wch.chg .wv{background:#3a2a10;color:#fcd34d}
+.fsov:not(.lit) .fsbody .wch.gone .wv{color:#4c5680}
+.fsov:not(.lit) .fsbody .simcol > .cttl{color:#4c5680}
+.fsov:not(.lit) .fsbody .simcnt{color:#6b769c}
+.fsov:not(.lit) .fsbody .simkeys{color:#4c5680}
+.fsov:not(.lit) .fsbody .simkeys kbd{background:#1b2238;border-color:#2b3554;color:#8f9ac2}
+.fsov:not(.lit) .fsbody .simrail{background:#1b2238}
+.fsov:not(.lit) .fsbody .simrail .grp::before{color:#4c5680}
+.fsov:not(.lit) .fsbody .simrail .sg{background:#2b3554}
+.fsov:not(.lit) .fsbody .simrail .sg:hover{background:#3d4a75}
+.fsov:not(.lit) .fsbody .simrail .sg.done{background:#6f79d8}
+.fsov:not(.lit) .fsbody .simrail .sg.tr{background:#0f8a67}
+.fsov:not(.lit) .fsbody .simrail .sg.fl{background:#c2295a}
+.fsov:not(.lit) .fsbody .simrail .sg.now{background:#8b85f5;box-shadow:0 0 0 2px rgba(139,133,245,.3)}
+.fsov:not(.lit) .fsbody .ccel .cbx{background:#1b2238;border-color:#3d4670;color:#e6e9f7}
+.fsov:not(.lit) .fsbody .ccel .cix{color:#5b678f}
+.fsov:not(.lit) .fsbody .ccel .cad{color:#4c5680}
+.fsov:not(.lit) .fsbody .ccel.look .cbx{background:#3a2a10;border-color:#b45309;color:#fcd34d}
+.fsov:not(.lit) .fsbody .ccel.hit  .cbx{background:#0d2b24;border-color:#059669;color:#6ee7b7}
+.fsov:not(.lit) .fsbody .ccel.miss .cbx{color:#4c5680;border-color:#2b3554}
+.fsov:not(.lit) .fsbody .cpin .ctag{background:#3a2a10;border-color:#b45309;color:#fcd34d}
+.fsov:not(.lit) .fsbody .simmeter{background:#3a2a10;border-color:#b45309;color:#fcd34d}
+.fsov:not(.lit) .fsbody .box,.fsov:not(.lit) .fsbody .subtle{color:#c3cbe4}
+/* every lesson page carries a site-wide `.btn.ghost{...!important}` next to the
+   drawer styles, so the bench has to answer in kind. Dark skin only — on the
+   light bench the page's own button is exactly right. */
+.fsov:not(.lit) .fsbody .btn.ghost{background:#1b2238!important;color:#c3cbe4!important;
+     border-color:#2b3554!important}
+.fsov:not(.lit) .fsbody .btn.ghost:hover:not(:disabled){border-color:#8b85f5!important;color:#fff!important}
+/* the light-code theme is for reading at home; on the dark bench a white code
+   surface lands as a slab in the middle of the instrument */
+body.codelight .fsov:not(.lit) .fsbody pre.code,
+body.codelight .fsov:not(.lit) .fsbody .carr-code{background:#0f172a;color:#e2e8f0;border-color:#232b45}
+body.codelight .fsov:not(.lit) .fsbody pre.code .k,body.codelight .fsov:not(.lit) .fsbody .carr-code .k{color:#c4b5fd}
+body.codelight .fsov:not(.lit) .fsbody pre.code .t,body.codelight .fsov:not(.lit) .fsbody .carr-code .t{color:#7dd3fc}
+body.codelight .fsov:not(.lit) .fsbody pre.code .f,body.codelight .fsov:not(.lit) .fsbody .carr-code .f{color:#fca5a5}
+body.codelight .fsov:not(.lit) .fsbody pre.code .n,body.codelight .fsov:not(.lit) .fsbody .carr-code .n{color:#fcd34d}
+body.codelight .fsov:not(.lit) .fsbody pre.code .c,body.codelight .fsov:not(.lit) .fsbody .carr-code .c{color:#64748b}
+
+/* ---- colour: the light bench. Everything not named here simply keeps the
+        page's own styling, which is the point — it is the page, enlarged. ---- */
+.fsov.lit{background:#eef1f8}
+.fsov.lit .fsnm{color:#94a3b8}
+.fsov.lit .fslt,.fsov.lit .fsx{background:#fff;border-color:#dfe3f2;color:#475569}
+.fsov.lit .fslt:hover,.fsov.lit .fsx:hover{border-color:#4f46e5;color:#1e1b4b}
+.fsov.lit .fsbody .sim{background:#fff;box-shadow:0 14px 32px -26px rgba(30,27,75,.45)}
+.fsov.lit .fsbody .simboard > .plate{color:#7b8199}
+/* plates, captions and key hints are deliberately faint on the page. Projected,
+   a label nobody can read is a label that is not there — Focus lifts them all. */
+.fsov:not(.lit) .fsbody .simboard > .plate{color:#8f9ac2}
+.fsov.lit .fsbody .simkeys{color:#7b8199}
+.fsov.lit .fsbody .simkeys kbd{color:#475569;border-color:#cbd5e1}
+
+/* ---------- the first card in a column needs room for its badge ----------
+   The numbered badge hangs 1.15rem above the card it belongs to, so a card
+   sitting flush against whatever is above it has its number clipped or
+   crowded. Every page gets the same clearance. */
+#p-lesson > .card:first-of-type,
+#p-exam > .card:first-of-type,
+.panel > main.wrap > .card:first-of-type{margin-top:2.6rem}
+main.wrap > .card:first-of-type{margin-top:2.6rem}
+
+/* ---------- narrow screens ---------- */
+@media(max-width:899px){
+  .sim .simbd{padding:.75rem}
+  .simboard{padding:.9rem .6rem;min-height:130px}
+  .simrow{gap:.65rem;margin-top:.65rem}
+}
+@media(max-width:560px){
+  .sim .simhd{padding:.5rem .65rem}
+  .sim .simbd{padding:.6rem}
+  .simmsg{padding:.55rem .65rem;min-height:64px}
+  .simmsg p{font-size:.82rem}
+  .simctl{gap:.35rem}
+  .simcnt{margin-left:0;width:100%;text-align:right}
+  .simrail .grp::before{font-size:.44rem;letter-spacing:.02em}
+  .fsov{padding:.5rem .5rem .8rem}
+  .fsbody{--cw:62px}
+  .fsbody .simmsg p{font-size:.92rem}
+}
+
+
+/* ---- this page ---- */
+:root{
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --mono:'Fira Code',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --bg:#f1f5f9; --panel:#fff; --ink:#1e293b; --ink-soft:#475569; --ink-mute:#64748b;
+  --line:#e2e8f0; --line-strong:#cbd5e1; --accent:#4f46e5; --r:1rem;
+  --sh-sm:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.04);
+  --sh-md:0 4px 6px -1px rgba(15,23,42,.07),0 2px 4px -2px rgba(15,23,42,.05);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 1rem}
+@media(min-width:768px){.wrap{padding:0 1.75rem}}
+code,.mono{font-family:var(--mono)}
+p code,li code,.tq code,.ta code,.simmsg code,td code,.lede code{font-size:.88em;font-weight:600;background:#eef2ff;color:#3730a3;
+  border:1px solid #e0e7ff;border-radius:.3rem;padding:.02rem .32rem;white-space:nowrap}
+
+/* top bar and tabs */
+.topbar{position:sticky;top:0;z-index:60;background:rgba(15,23,42,.97);border-bottom:1px solid #334155;color:#e2e8f0}
+.topbar-in{max-width:1120px;margin:0 auto;padding:.6rem 1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+@media(min-width:768px){.topbar-in{padding:.65rem 1.75rem}}
+.brand{display:flex;align-items:center;gap:.6rem;min-width:0}
+.brand-badge{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:grid;place-items:center;
+  font-weight:900;font-size:.72rem;color:#fff;flex:0 0 auto}
+.brand-t{font-size:.8rem;font-weight:800}
+.brand-s{font-size:.64rem;color:#94a3b8;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.tabs{display:flex;gap:.3rem;margin-left:auto;overflow-x:auto;scrollbar-width:none;padding:2px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:1px solid transparent;background:transparent;color:#94a3b8;font-family:inherit;font-size:.8rem;font-weight:700;
+  padding:.42rem .85rem;border-radius:.5rem;cursor:pointer;white-space:nowrap}
+.tab:hover{color:#e2e8f0;background:#1e293b}
+.tab[aria-selected="true"]{background:#e2e8f0;color:#0f172a}
+button:focus-visible,input:focus-visible{outline:3px solid #818cf8;outline-offset:2px}
+
+.hero{background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 55%,#312e81 100%);color:#e2e8f0;padding:2rem 0 2.3rem}
+.eyebrow{font-size:.66rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#a5b4fc;margin-bottom:.5rem}
+.hero h1{font-size:clamp(1.6rem,5vw,2.5rem);font-weight:900;letter-spacing:-.02em;margin:0 0 .5rem;line-height:1.15}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{font-size:1rem;color:#cbd5e1;max-width:62ch;margin:0}
+.lede code{background:rgba(255,255,255,.1);color:#e0e7ff;border-color:rgba(255,255,255,.18)}
+
+main{padding:1.6rem 0 4rem}
+.panel[hidden]{display:none}
+.card{background:var(--panel);border-radius:var(--r);box-shadow:var(--sh-md);padding:1.4rem 1.1rem;margin-bottom:2.6rem;position:relative;
+  border-top:4px solid var(--accent)}
+@media(min-width:768px){.card{padding:1.8rem 2rem}}
+.card>.badge{position:absolute;top:-1.15rem;left:1.1rem;width:2.4rem;height:2.4rem;border-radius:50%;background:var(--accent);color:#fff;
+  display:grid;place-items:center;font-weight:900;font-size:1rem;border:4px solid var(--bg);z-index:2}
+@media(min-width:768px){.card>.badge{left:2rem}}
+.card.numbered{padding-top:2.2rem}
+.panel > .card:first-of-type,.panel > .inbar + .card{margin-top:2.4rem}
+.kicker{font-size:.66rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:.35rem}
+.card h2{font-size:clamp(1.2rem,3.4vw,1.55rem);font-weight:800;letter-spacing:-.015em;margin:0 0 .6rem;line-height:1.25}
+.card p{margin:0 0 .75rem}
+.card > p:last-child{margin-bottom:0}
+
+/* the input bar of a tab */
+.inbar{margin-top:1.1rem;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .7rem;background:#fff;border:1px solid var(--line);border-radius:.8rem;
+  padding:.7rem .9rem;box-shadow:var(--sh-sm)}
+.inbar label{font-size:.8rem;font-weight:800;color:var(--ink-soft)}
+.inbar input,.tbar input{font-family:var(--mono);font-size:.95rem;font-weight:700;color:#1e1b4b;border:2px solid var(--line-strong);
+  border-radius:.5rem;padding:.35rem .6rem;min-width:0;width:15rem;max-width:100%}
+.inbar input.sm{width:9rem}
+.inbar .pre{appearance:none;font-family:var(--mono);font-size:.74rem;font-weight:700;color:var(--ink-soft);background:#f8fafc;
+  border:1px solid var(--line);border-radius:.45rem;padding:.3rem .55rem;cursor:pointer}
+.inbar .pre:hover{border-color:#a5b4fc;color:#3730a3}
+.inbar .note{font-size:.78rem;color:var(--ink-mute);flex-basis:100%;margin:0}
+.inbar .err,.tbar .err{font-size:.82rem;font-weight:800;color:#be123c;flex-basis:100%;margin:0}
+.inbar .err:empty,.tbar .err:empty{display:none}
+
+/* buttons (as on the course site) */
+.btn{appearance:none;font-family:inherit;font-weight:800;font-size:.82rem;padding:.6rem 1.15rem;border-radius:.55rem;cursor:pointer;border:none;
+  background:var(--accent);color:#fff;box-shadow:var(--sh-sm);transition:filter .15s,transform .1s}
+.btn:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn.ghost{background:#fff;color:var(--ink-soft);border:2px solid var(--line);box-shadow:none}
+.btn.ghost:hover:not(:disabled){border-color:var(--line-strong);color:var(--ink)}
+.btn.sm{font-size:.74rem;padding:.42rem .8rem}
+
+/* example rows */
+.exs{display:grid;gap:.45rem;margin:.6rem 0 1rem}
+.exrow{display:flex;align-items:center;gap:.3rem;flex-wrap:wrap}
+.exb{display:inline-grid;place-items:center;width:2.1rem;height:2.1rem;border:1.5px solid #a5b4fc;border-radius:.4rem;background:#fff;
+  font-family:var(--mono);font-weight:800;color:#1e1b4b;font-size:.9rem}
+.exb.alt{border-color:#fb923c;background:#fff7ed;color:#9a3412}
+.exarrow{color:var(--ink-mute);font-weight:800;margin:0 .35rem}
+.exv{font-size:.78rem;font-weight:800;border-radius:.35rem;padding:.12rem .5rem;margin-left:.5rem}
+.exv.yes{background:#ecfdf5;color:#047857;border:1px solid #6ee7b7}
+.exv.no{background:#fff1f2;color:#be123c;border:1px solid #fda4af}
+.exl{font-family:var(--mono);font-size:.78rem;font-weight:800;color:var(--ink-mute);width:1.6rem}
+
+/* your turn (as on the course site) */
+.turn{border:1.5px solid #c4b5fd;border-radius:.9rem;margin:1.1rem 0;overflow:hidden;background:linear-gradient(180deg,#faf8ff,#f6f3ff)}
+.turn .th{display:flex;align-items:center;gap:.5rem;padding:.6rem .95rem;border-bottom:1.5px solid #ddd6fe;background:rgba(255,255,255,.6)}
+.turn .th b{font-size:.62rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#6d28d9}
+.turn .tq{padding:.8rem .95rem;font-size:.96rem;line-height:1.62}
+.turn .tq p{margin:0 0 .55rem}
+.turn .tq p:last-child{margin:0}
+.turn .hint{font-size:.84rem;color:#7c3aed;font-weight:700}
+.turn .tbtn{appearance:none;font-family:inherit;font-size:.78rem;font-weight:800;border:1.5px solid #a78bfa;background:#fff;color:#6d28d9;
+  border-radius:.5rem;padding:.42rem .85rem;cursor:pointer;margin:0 .95rem .9rem}
+.turn .tbtn:hover{background:#f5f3ff;border-color:#7c3aed}
+.turn .ta{display:none;padding:0 .95rem .95rem;font-size:.94rem;line-height:1.62}
+.turn .ta.on{display:block}
+.turn .ta p{margin:0 0 .5rem}
+.turn .ta p:last-child{margin:0}
+
+/* two listings side by side: a sequence or two correct ways, not a verdict */
+.twinS{display:grid;gap:.8rem;margin:1rem 0}
+@media(min-width:800px){.twinS{grid-template-columns:1fr 1fr}}
+.twinS > div{border:1px solid var(--line);border-radius:.8rem;padding:.7rem .8rem .8rem;background:#f8fafc}
+.twinS > div:last-child{border-color:#c7d2fe;background:#f5f7ff}
+.twinS h4{margin:0 0 .45rem;font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute)}
+.twinS > div:last-child h4{color:var(--accent)}
+pre.code{font-family:var(--mono);font-size:.8rem;line-height:1.7;background:#0f172a;color:#e2e8f0;padding:.8rem 1rem;border-radius:.7rem;
+  overflow-x:auto;margin:0;white-space:pre}
+.k{color:#c4b5fd}.t{color:#fcd34d}.f{color:#7dd3fc}.n{color:#fdba74}.c{color:#64748b;font-style:italic}.s{color:#86efac}
+
+/* the live listing inside a simulator */
+.codewrap{position:relative;flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+.codewrap .cpy{position:absolute;top:.45rem;right:.55rem;z-index:2;appearance:none;font-family:inherit;font-size:.64rem;font-weight:800;
+  color:#cbd5e1;background:#1e293b;border:1px solid #334155;border-radius:.35rem;padding:.2rem .5rem;cursor:pointer}
+.codewrap .cpy:hover{color:#fff;border-color:#818cf8}
+pre.code.lines{padding:.6rem 0;flex:1 1 auto;max-height:min(64vh,560px);overflow:auto;font-size:.8rem;line-height:1.72}
+pre.code.lines .cl{display:grid;grid-template-columns:2.6em max-content auto auto 1fr;align-items:center;padding:0 .6rem 0 0;height:1.72em;width:max-content;min-width:100%;
+  cursor:pointer;border-radius:0;transition:background .2s,box-shadow .2s}
+pre.code.lines .cl:hover{background:rgba(148,163,184,.08)}
+pre.code.lines .cl .gn{color:#475569;text-align:right;padding-right:.9em;user-select:none;font-size:.86em}
+pre.code.lines .cl .tx{white-space:pre}
+pre.code.lines .cl.cur{background:rgba(251,191,36,.22);box-shadow:inset 3px 0 0 #f59e0b}
+pre.code.lines .cl.cur.simtrue{background:rgba(34,197,94,.2);box-shadow:inset 3px 0 0 #22c55e}
+pre.code.lines .cl.cur.simfalse{background:rgba(244,63,94,.18);box-shadow:inset 3px 0 0 #f43f5e}
+pre.code.lines .cl.struck .tx{text-decoration:line-through;text-decoration-color:#f43f5e;text-decoration-thickness:2px;color:#64748b}
+pre.code.lines .cl.fold .tx{color:#94a3b8;font-style:italic}
+pre.code.lines .cl.fold .tx b{font-style:normal;color:#a5b4fc}
+pre.code.lines .fh{width:max-content;min-width:100%;height:1.72em;line-height:1.72em;padding:0 .6rem 0 2.6em;color:#a5b4fc;font-size:.72rem;font-weight:700;cursor:pointer;user-select:none}
+pre.code.lines .tg{font-family:var(--sans);font-size:.56rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:.25rem;
+  padding:.02rem .32rem;margin-left:.6rem}
+pre.code.lines .tg.new{background:#064e3b;color:#6ee7b7}
+pre.code.lines .tg.changed{background:#422006;color:#fcd34d}
+pre.code.lines .pp{color:#818cf8;font-size:.62rem;letter-spacing:.02em;margin-left:.5rem;white-space:nowrap}
+.cttl small{font-size:.5rem;letter-spacing:.1em;color:#cbd5e1;font-weight:700;text-transform:none}
+
+/* the parts that sit under a drawing */
+.simfig{display:flex;justify-content:center;width:100%}
+.simfig svg{display:block;height:auto;max-width:100%}
+.fsbody .simfig svg{max-width:min(100%,calc(var(--W) * 1.75))}
+.cons{border:1px solid #e2e8f0;border-radius:.55rem;overflow:hidden}
+.cons .ch{font-size:.5rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#94a3b8;background:#f8fafc;padding:.3rem .6rem;
+  border-bottom:1px solid #e2e8f0}
+.cons pre{margin:0;padding:.45rem .7rem;font-family:var(--mono);font-size:.86rem;font-weight:700;color:#0f172a;line-height:1.5;min-height:calc(1.5em + .9rem);white-space:pre}
+.checks{font-family:var(--mono);font-size:.9rem;background:#0f172a;color:#e2e8f0;border-radius:.7rem;padding:.7rem .9rem;flex:1 1 auto}
+.checks div{padding:.12rem .4rem;border-radius:.3rem}
+.checks div.cur{background:rgba(251,191,36,.22);box-shadow:inset 3px 0 0 #f59e0b}
+.checks .v{color:#64748b}
+.checks .hid{visibility:hidden}
+.checks .stop{color:#fda4af;font-weight:700}
+.tblw{overflow-x:auto}
+table.tbl{border-collapse:collapse;font-size:.82rem;width:100%}
+table.tbl td,table.tbl th{white-space:nowrap}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:.22rem .5rem;text-align:left}
+table.tbl th{background:#f8fafc;color:var(--ink-mute);font-size:.66rem;letter-spacing:.06em;text-transform:uppercase}
+table.tbl td.mono{font-family:var(--mono);font-weight:700;white-space:nowrap}
+table.tbl .hid{visibility:hidden}
+table.tbl .chg{background:#fffbeb;color:#b45309;font-weight:800;border-radius:.2rem;padding:0 .15rem}
+table.tbl tr.now td{background:#eef2ff}
+.verdict{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.verdict > div{border:1px solid var(--line);border-radius:.55rem;padding:.4rem .6rem;text-align:center}
+.verdict .vl{font-size:.6rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute)}
+.verdict .vv{font-family:var(--mono);font-size:1.15rem;font-weight:800}
+.verdict.hid .vv{visibility:hidden}
+.verdict.diff > div:first-child{border-color:#fda4af;background:#fff1f2}
+.verdict.diff > div:first-child .vv{color:#be123c}
+.verdict.same > div:first-child{border-color:#6ee7b7;background:#ecfdf5}
+.found{font-weight:800;text-align:center;margin:.35rem 0 0;font-size:.9rem;color:#be123c;min-height:1.4em}
+.tbar{display:flex;flex-wrap:wrap;gap:.45rem .6rem;align-items:center;background:#f8fafc;border:1px solid var(--line);border-radius:.6rem;padding:.5rem .7rem}
+.tbar label{font-size:.78rem;font-weight:800;color:var(--ink-soft)}
+.starts{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center}
+.starts span{font-size:.78rem;font-weight:800;color:var(--ink-soft);margin-right:.2rem}
+.starts .btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sim .simmsg{min-height:4.6rem}
+.simcol > .simwatch{min-height:1.9rem}
+.simcol .cttl{margin-bottom:-.1rem}
+.counts{font-size:.8rem;font-weight:700;color:var(--ink-soft)}
+
+/* what we learned, and practice */
+.bridge{background:linear-gradient(135deg,#0f172a,#1e293b);border-left:5px solid var(--accent);border-radius:.85rem;padding:1.2rem 1.2rem;
+  color:#cbd5e1;margin:0 0 2.6rem;box-shadow:var(--sh-md)}
+.bridge .kicker{color:#a5b4fc}
+.bridge h3{color:#fff;margin:.1rem 0 .6rem;font-size:1.15rem}
+.bridge ol{margin:0;padding-left:1.2rem}
+.bridge li{margin:.35rem 0}
+.bridge code{background:rgba(255,255,255,.08);color:#e0e7ff;border:1px solid rgba(255,255,255,.15);border-radius:.3rem;padding:.02rem .3rem;font-size:.88em}
+.practice{background:#fff;border:1px dashed #6ee7b7;border-radius:.85rem;padding:.9rem 1.1rem;margin-bottom:2rem}
+.practice h3{margin:0 0 .4rem;font-size:.95rem;color:#047857}
+.ptbl{border-collapse:collapse;font-size:.9rem}
+.ptbl th,.ptbl td{border-bottom:1px solid var(--line);padding:.25rem .8rem .25rem 0;text-align:left}
+.ptbl th{font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute)}
+.ptbl td:first-child{font-family:var(--mono);font-weight:800;color:#047857}
+.ptbl a{color:#3730a3;font-weight:700}
+.pnote{font-size:.78rem;color:var(--ink-mute);margin:.45rem 0 0}
+footer{color:var(--ink-mute);font-size:.78rem;text-align:center;padding:1rem 0 2rem}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><div class="brand-badge">1AM</div>
+      <div><div class="brand-t">Arrays — think first, then code</div><div class="brand-s">CSE-1121 / 1122 · 11 Nov 2026</div></div></div>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="1" aria-selected="true">1 · Palindrome</button>
+      <button class="tab" role="tab" data-tab="2" aria-selected="false">2 · Selection sort</button>
+      <button class="tab" role="tab" data-tab="3" aria-selected="false">3 · Copy and remove</button>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Three array problems</div>
+    <h1>Think in small steps. <em>Then</em> write the loop.</h1>
+    <p class="lede">For each problem, do a few boxes by hand first. See what changes from line to line. That becomes a variable, and the lines become a loop.</p>
+  </div>
+</section>
+
+<main class="wrap">
+
+<!-- =================================================================== TAB 1 -->
+<div class="panel" id="t1" role="tabpanel">
+  <div class="inbar">
+    <label for="in-pal">The array:</label><input id="in-pal" value="1 2 3 3 2 1" autocomplete="off" spellcheck="false">
+    <button class="pre" data-for="in-pal" data-v="1 2 3 3 2 1">1 2 3 3 2 1</button>
+    <button class="pre" data-for="in-pal" data-v="3 5 7 5 3">3 5 7 5 3</button>
+    <button class="pre" data-for="in-pal" data-v="1 2 3 4 2 1">1 2 3 4 2 1</button>
+    <button class="pre" data-for="in-pal" data-v="7">7</button>
+    <p class="note">Steps 2, 3 and 5 use this array. Type your own: 1 to 10 numbers.</p>
+    <p class="err" id="err-pal"></p>
+  </div>
+  <div class="card numbered"><div class="badge">1</div>
+    <div class="kicker">Step 1</div>
+    <h2>The problem</h2>
+    <p>An array is a <b>palindrome</b> if it reads the same from the left and from the right. Input: <code>n</code>, then <code>n</code> numbers. Output: <code>Yes</code> or <code>No</code>.</p>
+    <div class="exs" id="ex-pal"></div>
+  </div>
+  <div class="card numbered"><div class="badge">2</div>
+    <div class="kicker">Step 2</div>
+    <h2>Think about single boxes</h2>
+    <p>Before the code, we write the checks by hand. The first check is <code>a[0] == a[n-1]</code>.</p>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>For <code>1 2 3 3 2 1</code> the first check is <code>a[0] == a[5]</code>. Write the next checks. When do we stop?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p><code>a[1] == a[4]</code>, then <code>a[2] == a[3]</code>, then stop. The left index goes up by 1, the right one goes down by 1. We stop when they meet.</p></div>
+    </div>
+    <div id="sim-pairs"></div>
+  </div>
+  <div class="card numbered"><div class="badge">3</div>
+    <div class="kicker">Step 3</div>
+    <h2>Walk with two variables</h2>
+    <p>One index goes up and one goes down, so each gets its own variable: <code>i</code> from the left, <code>j</code> from the right. A <code>for</code> loop can move both: <code>i++, j--</code>.</p>
+    <div id="sim-walk"></div>
+    <div class="twinS">
+      <div><h4>One variable</h4><pre class="code" data-code="one"></pre></div>
+      <div><h4>Two variables</h4><pre class="code" data-code="two"></pre></div>
+    </div>
+    <p>Both are correct. But <code>n - 1 - i</code> and <code>n / 2</code> are easy to get wrong. Two variables are easier to see.</p>
+  </div>
+  <div class="card numbered"><div class="badge">4</div>
+    <div class="kicker">Step 4</div>
+    <h2>A code that looks right</h2>
+    <p>Now we put a check inside the loop. This program compiles and runs. It prints Yes for <code>1 2 3 2 1</code> and No for <code>1 2 3 4 5</code>.</p>
+    <div id="sim-faulty"></div>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>This code is wrong. Find an array where it prints the wrong answer. Type it in the box above and run it.</p>
+        <p class="hint">Which pair decides the last value of f?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>Every pair writes over <code>f</code>, so only the last pair decides. Try <code>1 2 2 5</code>: the last pair matches, so it prints Yes. Or <code>7</code>: the loop never runs, so it prints No.</p></div>
+    </div>
+  </div>
+  <div class="card numbered"><div class="badge">5</div>
+    <div class="kicker">Step 5</div>
+    <h2>The real code: check the opposite</h2>
+    <p>We are asked: do <b>all</b> pairs match? The opposite is easier: is there <b>one</b> pair that does not match? One is enough to say No. The prime check works the same way.</p>
+    <div class="twinS">
+      <div><h4>Prime check</h4><pre class="code" data-code="prime"></pre></div>
+      <div><h4>Palindrome check</h4><pre class="code" data-code="palcore"></pre></div>
+    </div>
+    <div id="sim-real"></div>
+  </div>
+  <div class="bridge"><div class="kicker">What we learned</div>
+    <ol>
+      <li><code>i</code>, <code>n - 1 - i</code> and <code>i &lt; n / 2</code> work, but they are tricky. Use two variables instead.</li>
+      <li>Check the opposite of what is asked: look for one pair that does not match.</li>
+    </ol>
+  </div>
+  <div class="practice"><h3>Practice</h3>
+    <table class="ptbl"><tr><th>Row (SL)</th><th>Problem</th><th>Judge</th></tr>
+      <tr><td>14</td><td><a href="https://codeforces.com/group/MWSDmqGsZm/contest/219774/problem/G" target="_blank" rel="noopener">Palindrome Array</a></td><td>Codeforces</td></tr>
+      <tr><td>17</td><td><a href="https://www.hackerrank.com/contests/array-problems-1746719397/challenges/reverse-the-array-24" target="_blank" rel="noopener">Reverse the Array</a></td><td>HackerRank</td></tr>
+      <tr><td>4</td><td><a href="https://codeforces.com/group/MWSDmqGsZm/contest/219774/problem/F" target="_blank" rel="noopener">Reversing</a></td><td>Codeforces</td></tr>
+    </table>
+    <p class="pnote">Rows of the Array sheet. The HackerRank problems are in the course contest: sign in first.</p></div>
+</div>
+
+<!-- =================================================================== TAB 2 -->
+<div class="panel" id="t2" role="tabpanel" hidden>
+  <div class="inbar">
+    <label for="in-sort">The array:</label><input id="in-sort" value="29 5 14 37 13 8 21" autocomplete="off" spellcheck="false">
+    <button class="pre" data-for="in-sort" data-v="29 5 14 37 13 8 21">29 5 14 37 13 8 21</button>
+    <button class="pre" data-for="in-sort" data-v="64 25 12 22 11 90 7">64 25 12 22 11 90 7</button>
+    <button class="pre" data-for="in-sort" data-v="1 2 3 4 5 6 7">1 2 3 4 5 6 7</button>
+    <button class="pre" data-for="in-sort" data-v="3 3 1 2 1 3 2">3 3 1 2 1 3 2</button>
+    <p class="note">Every step uses this array. Type your own: 5 to 10 numbers.</p>
+    <p class="err" id="err-sort"></p>
+  </div>
+  <div class="card numbered"><div class="badge">1</div>
+    <div class="kicker">Step 1</div>
+    <h2>The problem</h2>
+    <p><b>Sort</b> the array from small to big. Input: <code>n</code>, then <code>n</code> numbers. Output: the numbers in order.</p>
+    <div class="exs" id="ex-sort"></div>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>We may only swap two boxes at a time. Which box would you fill first, and with which number?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>Box 0, with the smallest number. After that, box 0 never changes again.</p></div>
+    </div>
+  </div>
+  <div class="card numbered"><div class="badge">2</div>
+    <div class="kicker">Step 2</div>
+    <h2>Put the smallest at the front</h2>
+    <p>Find the smallest, as in the minimum problem. But keep its <b>index</b> <code>minIdx</code>, so we know where to swap.</p>
+    <div id="sim-s2"></div>
+  </div>
+  <div class="card numbered"><div class="badge">3</div>
+    <div class="kicker">Step 3</div>
+    <h2>The part that starts at index 3</h2>
+    <p>Now look only at the part from index 3 to the end. We want its smallest number in box 3.</p>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>Take the code of step 2. Which numbers must change?</p>
+        <p class="hint">Three places use 0 or 1.</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p><code>minIdx = 3</code>, <code>j = 4</code>, and the swap uses <code>a[3]</code>. The rest stays the same.</p></div>
+    </div>
+    <div id="sim-s3"></div>
+  </div>
+  <div class="card numbered"><div class="badge">4</div>
+    <div class="kicker">Step 4</div>
+    <h2>Make it a variable</h2>
+    <p>Pick where the part starts. The table shows the numbers we would write by hand. In the code, only <code>i = …;</code> changes.</p>
+    <div id="sim-s4"></div>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>We pick 0, then 1, then 2 …, without resetting the array. What happens?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>Each round puts one more box in its final place. After the last round, the array is sorted. So we put a loop around the round.</p></div>
+    </div>
+  </div>
+  <div class="card numbered"><div class="badge">5</div>
+    <div class="kicker">Step 5</div>
+    <h2>Repeat for every start</h2>
+    <p>Now <code>i</code> comes from a <code>for</code> loop. The round of step 4 goes inside it. For <code>n</code> numbers we need <code>n - 1</code> rounds: when all the other boxes are right, the last one is right too.</p>
+    <div id="sim-s5"></div>
+  </div>
+  <div class="bridge"><div class="kicker">What we learned</div>
+    <ol>
+      <li>Solve one round with real numbers first.</li>
+      <li>See what changes between rounds. Give it a name: <code>i</code>.</li>
+      <li>Put a loop around the round.</li>
+    </ol>
+  </div>
+  <div class="practice"><h3>Practice (in this order)</h3>
+    <table class="ptbl"><tr><th>Row (SL)</th><th>Problem</th><th>Judge</th></tr>
+      <tr><td>41</td><td><a href="https://www.hackerrank.com/contests/array-problems-1746719397/challenges/sort-2-2-1" target="_blank" rel="noopener">Sort 2</a></td><td>HackerRank</td></tr>
+      <tr><td>40</td><td><a href="https://www.hackerrank.com/contests/array-problems-1746719397/challenges/sort-1-2-2" target="_blank" rel="noopener">Sort 1</a></td><td>HackerRank</td></tr>
+      <tr><td>43</td><td><a href="https://www.hackerrank.com/contests/array-problems-1746719397/challenges/sort-4-1-1" target="_blank" rel="noopener">Sort 4</a></td><td>HackerRank</td></tr>
+      <tr><td>42</td><td><a href="https://www.hackerrank.com/contests/array-problems-1746719397/challenges/sort-3-2-1" target="_blank" rel="noopener">Sort 3</a></td><td>HackerRank</td></tr>
+      <tr><td>44</td><td><a href="https://codeforces.com/group/MWSDmqGsZm/contest/219774/problem/H" target="_blank" rel="noopener">Sorting</a></td><td>Codeforces</td></tr>
+    </table>
+    <p class="pnote">Rows of the Array sheet. The HackerRank problems are in the course contest: sign in first.</p></div>
+</div>
+
+<!-- =================================================================== TAB 3 -->
+<div class="panel" id="t3" role="tabpanel" hidden>
+  <div class="inbar">
+    <label for="in-a">a =</label><input id="in-a" class="sm" value="1 2 2 3" autocomplete="off" spellcheck="false">
+    <label for="in-b">b =</label><input id="in-b" class="sm" value="3 4 1 1 1" autocomplete="off" spellcheck="false">
+    <button class="pre" data-ab="1 2 2 3|3 4 1 1 1">1 2 2 3 | 3 4 1 1 1</button>
+    <button class="pre" data-ab="2 2 2|2 5 5">2 2 2 | 2 5 5</button>
+    <button class="pre" data-ab="1 1 2|1 3 1 1">1 1 2 | 1 3 1 1</button>
+    <p class="note">Every step uses these arrays. Type your own: 1 to 6 numbers in each.</p>
+    <p class="err" id="err-ab"></p>
+  </div>
+  <div class="card numbered"><div class="badge">1</div>
+    <div class="kicker">Step 1</div>
+    <h2>The problem</h2>
+    <p>Read <code>a</code> (<code>n</code> numbers) and <code>b</code> (<code>m</code> numbers). Copy <code>a</code> backwards, then <code>b</code> backwards, into <code>c</code>. Then delete the consecutive values: when a value comes again right after itself, keep only one. The result is <code>d</code>.</p>
+    <div class="exs" id="ex-copy"></div>
+  </div>
+  <div class="card numbered"><div class="badge">2</div>
+    <div class="kicker">Step 2</div>
+    <h2>Copy a into c — by hand, then a loop</h2>
+    <p>Start simple: copy <code>a</code> into the first part of <code>c</code>, with no reverse. One line per box, then see what changes.</p>
+    <div id="sim-c2"></div>
+  </div>
+  <div class="card numbered"><div class="badge">3</div>
+    <div class="kicker">Step 3</div>
+    <h2>Copy b into the second part of c</h2>
+        <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p><code>c[0]</code> to <code>c[n-1]</code> are full. Where does <code>b[0]</code> go? Can we write <code>c[i] = b[i]</code>?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p><code>b[0]</code> goes to <code>c[n]</code>. <code>c[i] = b[i]</code> would write over the copy of <code>a</code>. Two numbers change now, so we use two variables: <code>i</code> for <code>b</code>, <code>j</code> for <code>c</code>.</p></div>
+    </div>
+    <div id="sim-c3"></div>
+  </div>
+  <div class="card numbered"><div class="badge">4</div>
+    <div class="kicker">Step 4</div>
+    <h2>Now copy in reverse</h2>
+        <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>Copy <code>a</code> backwards: <code>c[0] = a[3];</code>, <code>c[1] = a[2];</code> … The left number goes up. What does the right number do?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>It goes down, like <code>i</code> and <code>j</code> in the palindrome.</p></div>
+    </div>
+    <div id="sim-c4"></div>
+  </div>
+  <div class="card numbered"><div class="badge">5</div>
+    <div class="kicker">Step 5</div>
+    <h2>Delete the consecutive values</h2>
+    <p>Keep the first value of each run, then jump over the rest of the run. <code>i</code> reads <code>c</code>, <code>j</code> writes <code>d</code>, <code>k</code> looks ahead.</p>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p><code>k</code> stops on the first different value. Why do we write <code>i = k - 1</code> and not <code>i = k</code>?</p>
+        <p class="hint">What does the for loop do after the body?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>The <code>for</code> loop does <code>i++</code> next. With <code>i = k</code> we would jump over one box.</p></div>
+    </div>
+    <div id="sim-c5"></div>
+  </div>
+  <div class="card numbered"><div class="badge">6</div>
+    <div class="kicker">Step 6</div>
+    <h2>Another way</h2>
+    <p>A shorter way looks back instead of ahead: keep <code>c[i]</code> when it is different from <code>c[i - 1]</code>. <code>c[0]</code> has no box before it, so it is always kept.</p>
+    <div id="sim-c6"></div>
+  </div>
+  <div class="bridge"><div class="kicker">What we learned</div>
+    <ol>
+      <li>Write the first lines by hand, see what changes, then make the loop.</li>
+      <li>One variable, one job: <code>i</code> reads, <code>j</code> writes, <code>k</code> looks ahead.</li>
+      <li>If you change <code>i</code> inside a <code>for</code> loop, <code>i++</code> still runs after the body.</li>
+    </ol>
+  </div>
+  <div class="practice"><h3>Practice</h3>
+    <table class="ptbl"><tr><th>Row (SL)</th><th>Problem</th><th>Judge</th></tr>
+      <tr><td>25</td><td><a href="https://www.hackerrank.com/contests/array-problems-1746719397/challenges/copied-array" target="_blank" rel="noopener">Copied Array</a></td><td>HackerRank</td></tr>
+      <tr><td>26</td><td><a href="https://www.hackerrank.com/contests/array-problems-1746719397/challenges/reversely-copied-array" target="_blank" rel="noopener">Reversely Copied Array</a></td><td>HackerRank</td></tr>
+      <tr><td>27</td><td><a href="https://www.hackerrank.com/contests/array-problems-1746719397/challenges/merge-the-arrays-3" target="_blank" rel="noopener">Merge the Arrays!</a></td><td>HackerRank</td></tr>
+      <tr><td>81</td><td><a href="https://www.hackerrank.com/contests/array-problems-1746719397/challenges/polar-adjacency" target="_blank" rel="noopener">Polar Adjacency (challenge)</a></td><td>HackerRank</td></tr>
+    </table>
+    <p class="pnote">Rows of the Array sheet. The HackerRank problems are in the course contest: sign in first.</p></div>
+</div>
+</main>
+<footer>Keys in a simulator: <b>n</b> next · <b>b</b> back · <b>p</b> play · <b>r</b> reset · <b>1</b> <b>2</b> <b>3</b> switch the problem.</footer>
+
+<script>
+/* ---- the simulator shell, copied from the CSE-2321 course site (assets/sim.js) ---- */
+/* ==========================================================================
+   CSE-2321 · the simulator shell
+   --------------------------------------------------------------------------
+   One driver for every simulator on the site. A page describes its steps and
+   draws its own picture; this file supplies the frame, the step rail, the
+   watch strip, the narration, the buttons, Focus, and the keyboard.
+
+   Two shapes:
+     stepped  — pass `steps`; you get a rail, a counter, Next/Back/Reset, and
+                buttons that disable at both ends.
+     free     — omit `steps`; the student drives it. You still get the frame,
+                Focus, watches and narration.
+
+   Two options a stepped simulator may add:
+     play     — put a <button data-k="play"> in the control row and the shell
+                owns the auto-advance: label, interval, stopping at the end,
+                stopping the moment anyone touches Next, Back, Reset or the
+                rail, and the `p` key. `play:1100` sets the pause in ms.
+     lines    — nominate the nodes that are the listing: `lines:'#x .st'`.
+                The shell then marks the live one `cur` every step, scrolls it
+                into view only when it is off-screen, and — where a step
+                carries `cond:{ln,ok}` — marks that line `simtrue` or
+                `simfalse`, tints its rail segment green or red, and prints
+                TRUE or FALSE beside the narration. The nodes can be anything:
+                on the flowchart page they are the SVG shapes, so the decision
+                diamond itself goes green on Yes and red on No.
+
+                A widget may show the SAME step in two listings at once — the
+                numbered procedure and the C++ beside it — at different line
+                numbers. Pass a list, each with its own index, and switching
+                tabs never loses your place:
+
+                  lines:[{sel:'#x [data-pane=\"a\"] .st', of:function(s){return s.la;}},
+                         {sel:'#x [data-pane=\"c\"] .cl', of:function(s){return s.lc;}}]
+
+   ES5 on purpose: it has to match the rest of the site, and it has to run
+   from file:// on a classroom laptop with no build step.
+
+   VERSION. Every page links this file as `sim.js?v=N`. GitHub Pages lets a
+   browser cache it, so a laptop that has already opened the site can keep
+   serving an old copy after a change. BUMP THE ?v= ON EVERY PAGE whenever
+   this file or sim.css changes, or the change will not reach the room.
+   ========================================================================== */
+window.Sim = (function(){
+"use strict";
+
+var $  = function(s,r){ return (r||document).querySelector(s); };
+var $$ = function(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
+
+var REG = [];          /* every mounted simulator, for the keyboard */
+var ov=null, fsBody=null, fsName=null, holder=null, openSim=null;
+var THEME_KEY='cse2321-focus-skin';
+
+/* ---------- the Focus overlay: built once, shared by every simulator ------
+   Focus MOVES the block into the overlay and puts it back on close, so there
+   is only ever one copy of the DOM and no state to keep in sync.          */
+function buildOverlay(){
+  if(ov) return;
+  ov=document.createElement('div');
+  ov.className='fsov';
+  ov.innerHTML='<div class="fsbar"><span class="fsnm" id="fs-nm"></span>'+
+               '<button class="fslt" type="button" id="fs-lt" title="Light or dark bench"></button>'+
+               '<button class="fsx" type="button" id="fs-x">Esc &#10005;</button></div>'+
+               '<div class="fsbody" id="fs-body"></div>';
+  document.body.appendChild(ov);
+  fsBody=$('#fs-body',ov); fsName=$('#fs-nm',ov);
+  $('#fs-x',ov).addEventListener('click',function(){ close(); });
+
+  /* Dark is the default: highest contrast in a lit room. Some projectors
+     cannot draw a convincing black, so the skin is a choice and it sticks. */
+  var lt=$('#fs-lt',ov);
+  function paintSkin(){
+    var light=ov.classList.contains('lit');
+    lt.innerHTML = light ? '\u263E Dark' : '\u2600 Light';
+    lt.setAttribute('aria-pressed', light?'true':'false');
+  }
+  var saved=null; try{ saved=localStorage.getItem(THEME_KEY); }catch(e){}
+  if(saved==='light') ov.classList.add('lit');
+  paintSkin();
+  lt.addEventListener('click',function(){
+    ov.classList.toggle('lit');
+    try{ localStorage.setItem(THEME_KEY, ov.classList.contains('lit')?'light':'dark'); }catch(e){}
+    paintSkin();
+    if(openSim) openSim.refit();
+  });
+  ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape' && ov.classList.contains('on')) close();
+  });
+}
+
+function open(sim){
+  buildOverlay();
+  if(openSim) close();
+  holder=document.createComment('sim-focus-placeholder');
+  sim.el.parentNode.insertBefore(holder, sim.el);
+  fsBody.appendChild(sim.el);
+  fsName.textContent = sim.name || '';
+  ov.classList.add('on');
+  document.body.classList.add('fsopen');
+  openSim=sim;
+  mark();
+  /* refit after the overlay has actually laid out, not on one frame */
+  sim.refit();
+  void ov.offsetWidth;
+  requestAnimationFrame(function(){ sim.refit(); });
+  setTimeout(function(){ sim.refit(); },150);
+  $('#fs-x',ov).focus({preventScroll:true});
+}
+
+function close(){
+  if(!openSim) return;
+  var sim=openSim;
+  if(holder && holder.parentNode) holder.parentNode.replaceChild(sim.el, holder);
+  holder=null; openSim=null;
+  mark();
+  ov.classList.remove('on');
+  document.body.classList.remove('fsopen');
+  sim.refit();
+  var b=$('.focusb',sim.el); if(b) b.focus({preventScroll:true});
+}
+
+/* ---------- one simulator ---------- */
+function make(cfg){
+  var el = typeof cfg.el==='string' ? $(cfg.el) : cfg.el;
+  if(!el) return null;
+
+  var steps  = cfg.steps || null;
+  var railEl = $('.simrail',el);
+  var msgEl  = $('.simmsg p',el);
+  var numEl  = $('.simmsg .smn',el);
+  var watEl  = $('.simwatch',el);
+  var cntEl  = $('.simcnt',el);
+  var metEl  = $('.simmeter b',el);
+  var bNext  = $('[data-k="next"]',el);
+  var bBack  = $('[data-k="back"]',el);
+  var bReset = $('[data-k="reset"]',el);
+  var bPlay  = $('[data-k="play"]',el);
+  var focusB = $('.focusb',el);
+
+  var i=0, lastWatch={};
+  var timer=null;                         /* the Play interval, if one is running */
+  var PLAY_MS = (typeof cfg.play==='number' && cfg.play>0) ? cfg.play : 1000;
+  var lineEls=null, verdEl=null;
+
+  var api={
+    el:el,
+    /* Bring something into view ONLY if it is actually outside the box it
+       lives in, and then by the smallest amount that works. Re-centring the
+       view on every press makes a walk impossible to follow — the thing that
+       changed stays still and the whole picture slides underneath it. */
+    reveal:function(target,container){
+      if(!target||!container) return;
+      var t=target.getBoundingClientRect(), c=container.getBoundingClientRect();
+      var pad=12;
+      if(t.top < c.top+pad)            container.scrollTop -= (c.top+pad) - t.top;
+      else if(t.bottom > c.bottom-pad) container.scrollTop += t.bottom - (c.bottom-pad);
+    },
+    name: cfg.name || (($('.simnm',el)||{}).textContent||'').trim(),
+    index:function(){ return i; },
+    count:function(){ return steps?steps.length:0; },
+    msg:function(html){ if(msgEl) msgEl.innerHTML=html; },
+    /* A watch chip flashes on the step where its value changed, so nothing
+       moves silently. Pass [['LOC',4],['C',2]] — order is kept. */
+    watch:function(list,opt){
+      if(!watEl) return;
+      var h='',seen={};
+      for(var k=0;k<list.length;k++){
+        var n=list[k][0], v=String(list[k][1]);
+        var extra=(list[k][2]||'');
+        seen[n]=v;
+        var chg = (lastWatch.hasOwnProperty(n) && lastWatch[n]!==v);
+        h+='<span class="wch'+(chg?' chg':'')+(extra?' '+extra:'')+'">'+
+           '<span class="wn">'+n+'</span><span class="wv">'+v+'</span></span>';
+      }
+      watEl.innerHTML=h;
+      if(!opt||!opt.keep) lastWatch=seen;
+    },
+    resetWatch:function(){ lastWatch={}; },
+    meter:function(v){ if(metEl) metEl.textContent=v; },
+    focus:function(){ open(api); },
+    refit:function(){ if(cfg.onFit) cfg.onFit(api); },
+    hasPlay:function(){ return !!(bPlay && steps); },
+    playing:function(){ return !!timer; },
+    toggle:function(){ if(timer) pause(); else play(); },
+    go:go, next:next, back:back, reset:reset, play:play, pause:pause,
+    /* local addition for lectures/2026-11-11-arrays-2d: new steps after the input changes */
+    setSteps:function(s){ pause(); steps=s; i=0; lastWatch={}; paint(); }
+  };
+
+/* ---------- Play: the shell owns the clock -------------------------------
+   A lecturer starts the run, then talks over it. So Play must stop itself at
+   the last step, stop the instant anyone reaches for Next or Back — the
+   press means "I want to drive now" — and start over if pressed at the end,
+   because nobody presses Play to watch nothing happen.                    */
+  function playLabel(){
+    if(!bPlay) return;
+    bPlay.innerHTML = timer ? (bPlay.getAttribute('data-on')  || '\u23F8 Pause')
+                            : (bPlay.getAttribute('data-off') || '\u25B6 Play');
+    bPlay.setAttribute('aria-pressed', timer?'true':'false');
+  }
+  function pause(){ if(timer){ clearInterval(timer); timer=null; playLabel(); } }
+  function play(){
+    if(!steps || !bPlay || timer) return;
+    if(i>=steps.length-1){ i=0; lastWatch={}; paint(); }
+    timer=setInterval(function(){
+      if(i<steps.length-1){ i++; paint(); }
+      else pause();
+    },PLAY_MS);
+    playLabel();
+  }
+
+/* ---------- the listing: one live line, and the answer to its condition ---
+   Every stepper on the site was doing this by hand, and every one of them
+   was doing it slightly differently. The page says which nodes are lines;
+   the shell says which one is live and what a condition on it evaluated to. */
+  /* one listing, or several shown side by side — each with its own index */
+  function listings(){
+    if(lineEls) return lineEls;
+    var L=cfg.lines;
+    if(!L){ lineEls=[]; return lineEls; }
+    var dflt = cfg.lineOf || function(st){ return st.l; };
+    if(typeof L==='string')      lineEls=[{nodes:$$(L), of:dflt, first:true}];
+    else if(L.length===undefined) lineEls=[{nodes:[L], of:dflt, first:true}];
+    else if(typeof L[0]==='string' || (L[0] && L[0].nodeType))
+                                 lineEls=[{nodes:(typeof L[0]==='string'?$$(L[0]):L), of:dflt, first:true}];
+    else lineEls=L.map(function(x,i){
+      return {nodes: typeof x.sel==='string' ? $$(x.sel) : x.sel,
+              of: x.of || dflt, first:i===0};
+    });
+    return lineEls;
+  }
+  /* the box the listing scrolls inside, if it scrolls at all */
+  function scroller(node){
+    if(cfg.pane) return $(cfg.pane);
+    var p=node.parentNode;
+    while(p && p.nodeType===1){
+      var ov=window.getComputedStyle(p).overflowY;
+      if((ov==='auto'||ov==='scroll') && p.scrollHeight>p.clientHeight+1) return p;
+      p=p.parentNode;
+    }
+    return null;
+  }
+  function indexIn(set, st){
+    if(!st) return null;
+    /* cond.ln names a line in the FIRST listing only — with several listings
+       each one already carries its own index function */
+    if(set.first && st.cond && typeof st.cond.ln==='number') return st.cond.ln;
+    var n=set.of(st);
+    return typeof n==='number' ? n : null;
+  }
+  function paintLines(st){
+    var sets=listings(); if(!sets.length) return;
+    var c=st&&st.cond;
+    for(var q=0;q<sets.length;q++){
+      var nodes=sets[q].nodes, idx=indexIn(sets[q],st);
+      for(var k=0;k<nodes.length;k++){
+        var on=(k===idx);
+        nodes[k].classList.toggle('cur',on);
+        nodes[k].classList.toggle('simtrue',  on && !!c && c.ok===true);
+        nodes[k].classList.toggle('simfalse', on && !!c && c.ok===false);
+      }
+      /* looked up fresh every step: Focus moves the block, so the box a line
+         scrolls inside is not the same box it was a moment ago. A listing that
+         is not on screen (the hidden half of a tab pair) has no scroller. */
+      if(idx!==null && nodes[idx] && nodes[idx].offsetParent!==null){
+        var pane=scroller(nodes[idx]);
+        if(pane) api.reveal(nodes[idx], pane);
+      }
+    }
+  }
+  /* TRUE or FALSE, beside the step number, in the shell's own words */
+  function verdict(st){
+    var c = st && st.cond;
+    if(!verdEl){
+      if(!c || !msgEl) return;
+      verdEl=document.createElement('span');
+      verdEl.className='smv';
+      msgEl.parentNode.insertBefore(verdEl,msgEl);
+    }
+    verdEl.className = c ? ('smv on '+(c.ok?'tr':'fl')) : 'smv';
+    if(c) verdEl.textContent = c.ok ? 'TRUE' : 'FALSE';
+  }
+
+  function railPaint(){
+    if(!railEl||!steps) return;
+    var groups=[], cur=null;
+    for(var k=0;k<steps.length;k++){
+      var g = cfg.group ? cfg.group(steps[k],k) : '';
+      if(cur===null || g!==cur){ cur=g; groups.push({l:g,items:[]}); }
+      groups[groups.length-1].items.push(k);
+    }
+    var h='';
+    for(var q=0;q<groups.length;q++){
+      h+='<div class="grp" data-l="'+groups[q].l+'" style="--f:'+groups[q].items.length+'">';
+      for(var j=0;j<groups[q].items.length;j++){
+        var n=groups[q].items[j], c='sg';
+        if(n<i) c+=' done';
+        if(n===i) c+=' now';
+        else {
+          /* a step that tested something colours its own segment */
+          var t = cfg.tone ? cfg.tone(steps[n],n)
+                : (steps[n].cond ? (steps[n].cond.ok?'tr':'fl') : null);
+          if(t) c+=' '+t;
+        }
+        h+='<button class="'+c+'" type="button" data-i="'+n+'" '+
+           'aria-label="Step '+(n+1)+(groups[q].l?', '+groups[q].l:'')+'"></button>';
+      }
+      h+='</div>';
+    }
+    railEl.innerHTML=h;
+  }
+
+  function paint(){
+    if(steps){
+      if(cfg.render) cfg.render(steps[i], i, api);
+      paintLines(steps[i]);
+      verdict(steps[i]);
+      if(numEl) numEl.textContent=i+1;
+      if(cntEl) cntEl.textContent=(i+1)+' / '+steps.length;
+      if(bNext)  bNext.disabled  = i>=steps.length-1;
+      if(bBack)  bBack.disabled  = i<=0;
+      railPaint();
+    } else {
+      if(cfg.render) cfg.render(null, 0, api);
+    }
+  }
+
+  function go(n){
+    pause();
+    if(!steps) return;
+    n=Math.max(0,Math.min(steps.length-1,n));
+    if(n===i) { paint(); return; }
+    /* jumping backwards must not leave stale "changed" flags behind */
+    if(n<i) lastWatch={};
+    i=n; paint();
+  }
+  function next(){ pause(); if(steps && i<steps.length-1){ i++; paint(); } }
+  function back(){ pause(); if(steps && i>0){ lastWatch={}; i--; paint(); } }
+  function reset(){
+    pause(); lastWatch={};
+    if(steps){ i=0; paint(); }
+    else if(cfg.onReset){ cfg.onReset(api); }
+  }
+
+  if(bNext)  bNext.addEventListener('click',next);
+  if(bBack)  bBack.addEventListener('click',back);
+  if(bReset) bReset.addEventListener('click',reset);
+  if(bPlay){ bPlay.addEventListener('click',function(){ api.toggle(); }); playLabel(); }
+  if(focusB) focusB.addEventListener('click',function(){ open(api); });
+  if(railEl) railEl.addEventListener('click',function(e){
+    var b=e.target.closest ? e.target.closest('.sg') : null;
+    if(b) go(+b.getAttribute('data-i'));
+  });
+
+  REG.push(api);
+  paint();
+  return api;
+}
+
+/* ---------- n / b / r drive the simulator you are looking at --------------
+   A lecture is run from the keyboard: the mouse is for pointing at the wall,
+   not for hunting a Next button. The keys always mean the simulator in Focus,
+   or failing that the one covering most of the view. `p` plays and pauses,
+   but only where the simulator actually has a Play button.                */
+function keyTarget(){
+  if(openSim) return openSim;
+  var H=window.innerHeight, mid=H/2, bestVis=0, bestD=1e9, target=null;
+  for(var j=0;j<REG.length;j++){
+    var r=REG[j].el.getBoundingClientRect();
+    var vis=Math.min(r.bottom,H)-Math.max(r.top,0);
+    if(vis<=0) continue;
+    var d=Math.abs((r.top+r.bottom)/2-mid);
+    /* most screen wins; a tie goes to the one nearer the middle */
+    if(vis>bestVis+1 || (Math.abs(vis-bestVis)<=1 && d<bestD)){
+      bestVis=vis; bestD=d; target=REG[j];
+    }
+  }
+  return target;
+}
+
+/* ---------- say which block the keys are pointing at ----------------------
+   Pressing n when you thought you were driving the other simulator is a
+   confusing half-second in front of a class. The block the keys currently
+   own carries a quiet ring, kept in step with the page as it scrolls. It
+   uses keyTarget(), so the ring and the keys cannot disagree. */
+var marked=null, markTick=null;
+function mark(){
+  markTick=null;
+  var t=keyTarget();
+  var el=(t && !openSim) ? t.el : null;
+  if(el===marked) return;
+  if(marked) marked.classList.remove('simon');
+  marked=el;
+  if(marked) marked.classList.add('simon');
+}
+function markSoon(){ if(!markTick) markTick=setTimeout(mark,120); }
+window.addEventListener('scroll',markSoon,{passive:true});
+window.addEventListener('resize',markSoon);
+
+document.addEventListener('keydown',function(e){
+  var t=document.activeElement;
+  if(t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+  if(t && t.isContentEditable) return;
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  var k=e.key.toLowerCase();
+  if(k!=='n'&&k!=='b'&&k!=='r'&&k!=='p') return;
+
+  var target=keyTarget();
+  if(!target) return;
+  /* p only belongs to a simulator that has a Play button; everywhere else it
+     stays a free key for the page to use. */
+  if(k==='p'){ if(!target.hasPlay()) return; target.toggle(); }
+  else if(k==='n') target.next();
+  else if(k==='b') target.back();
+  else target.reset();
+  e.preventDefault();
+});
+
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',mark);
+else setTimeout(mark,0);
+
+return { make:make, open:open, close:close, all:function(){ return REG.slice(); },
+         keyTarget:keyTarget };
+})();
+
+</script>
+<script id="logic">
+/* =====================================================================
+   LOGIC — no DOM in this file.
+   Every program here is the exact text the page shows. Each builder runs
+   the algorithm once on the input and records one step per line that
+   runs. The page only moves through that list. c/check.js loads this file,
+   compiles each program with gcc and compares the result.
+   ===================================================================== */
+"use strict";
+var LOGIC = (function () {
+  var clone = function (o) { return JSON.parse(JSON.stringify(o)); };
+
+  function parseList(s, min, max, name) {
+    var t = String(s).trim().split(/[\s,]+/).filter(Boolean);
+    var who = name ? name + ': ' : '';
+    for (var q = 0; q < t.length; q++) {
+      if (!/^-?\d+$/.test(t[q])) return {err: who + '"' + t[q] + '" is not a whole number.'};
+      if (Math.abs(parseInt(t[q], 10)) > 99) return {err: who + 'please use numbers from -99 to 99.'};
+    }
+    if (t.length < min) return {err: who + 'please type at least ' + min + (min === 1 ? ' number.' : ' numbers.')};
+    if (t.length > max) return {err: who + 'please type at most ' + max + ' numbers.'};
+    return {v: t.map(function (x) { return parseInt(x, 10); })};
+  }
+
+  /* ---------- the program model ----------
+     P.at(text) finds the first line that STARTS with text (spaces ignored).
+     A program is a list of blocks. A block may fold to one line (the parts
+     taught in an earlier step), carry a tag on its lines ("new", "changed"),
+     or be struck out (the hand-written lines a loop replaces). */
+  var PID = 0;
+  function prog(blocks) {
+    var P = {id: ++PID, lines: [], blocks: []};
+    blocks.forEach(function (b, bi) {
+      var from = P.lines.length;
+      b.lines.forEach(function (x) {
+        var t = typeof x === 'string' ? x : x[0];
+        var tag = typeof x === 'string' ? (b.tag || null) : x[1];
+        if (tag !== 'changed') tag = null;   /* "new" tags were a distraction (Jamil, 11 Nov) */
+        P.lines.push({t: t, b: bi, tag: tag, struck: !!b.struck});
+      });
+      P.blocks.push({id: b.id || ('b' + bi), fold: b.fold || null, from: from, to: P.lines.length - 1});
+    });
+    P.at = function (sub, after) {
+      var start = 0;
+      if (after !== undefined) start = (typeof after === 'number' ? after : P.at(after)) + 1;
+      for (var k = start; k < P.lines.length; k++)
+        if (!P.lines[k].struck && P.lines[k].t.trim().indexOf(sub.trim()) === 0) return k;
+      throw new Error('line not found: ' + sub);
+    };
+    P.text = function () {
+      return P.lines.filter(function (l) { return !l.struck; }).map(function (l) { return l.t; }).join('\n') + '\n';
+    };
+    return P;
+  }
+  var BL = {lines: ['']};
+  var END = {lines: ['    return 0;', '}']};
+  function head(decl) {
+    return {lines: ['#include <stdio.h>', '', 'int main()', '{'].concat(decl.map(function (d) { return '    ' + d; }))};
+  }
+  var READ_A = {id: 'read', fold: 'read n, then a[0] to a[n-1]', lines: [
+    '    scanf("%d", &n);', '    for (i = 0; i < n; i++)', '        scanf("%d", &a[i]);']};
+  var READ_AB = {id: 'read', fold: 'read n and a, then m and b', lines: [
+    '    scanf("%d", &n);', '    for (i = 0; i < n; i++)', '        scanf("%d", &a[i]);',
+    '    scanf("%d", &m);', '    for (i = 0; i < m; i++)', '        scanf("%d", &b[i]);']};
+  function printBlock(arr, cnt) {
+    return {id: 'print', fold: 'print ' + arr + '[0] to ' + arr + '[' + cnt + '-1]', lines: [
+      '    for (i = 0; i < ' + cnt + '; i++)', '        printf("%d ", ' + arr + '[i]);', '    printf("\\n");']};
+  }
+
+  /* one step = the line that runs, what it says, and a copy of the picture */
+  function recorder() {
+    var S = [];
+    return {
+      S: S,
+      put: function (P, l, say, view, watch, extra) {
+        var st = {prog: P, l: l, say: say, view: clone(view), watch: watch ? clone(watch) : []};
+        if (extra) for (var k in extra) st[k] = extra[k];
+        S.push(st);
+      }
+    };
+  }
+  var q = function (v) { return v === null || v === undefined ? '?' : v; };
+  function palRight(a) {
+    for (var i = 0, j = a.length - 1; i < j; i++, j--) if (a[i] !== a[j]) return 'No';
+    return 'Yes';
+  }
+
+  /* =================== TAB 1 · PALINDROME =================== */
+
+  /* Step 2: no code yet. The checks are written one by one. */
+  function palPairs(a) {
+    var n = a.length, R = recorder();
+    var v = {a: a, list: [], cur: null, mid: null};
+    R.put(null, null, 'We write the checks one by one. The first box must match the last box.', v);
+    for (var k = 0; k < Math.floor(n / 2); k++) {
+      var p = n - 1 - k;
+      v.cur = [k, p]; v.list.push([k, p]);
+      R.put(null, null, 'Check ~a[' + k + '] == a[' + p + ']~. The values are ' + a[k] + ' and ' + a[p] + '.', v);
+    }
+    v.cur = null;
+    if (n === 1) { v.mid = 0; R.put(null, null, 'There is only one box. There is nothing to check.', v); }
+    else if (n % 2) {
+      v.mid = (n - 1) / 2;
+      R.put(null, null, '~a[' + v.mid + ']~ is the middle box. It has no partner. Stop.', v);
+    } else {
+      R.put(null, null, 'The next pair would be ~a[' + (n / 2) + ']~ and ~a[' + (n / 2 - 1) + ']~. We checked it already. Stop.', v);
+    }
+    return R.S;
+  }
+
+  var FOR2 = '    for (i = 0, j = n - 1; i < j; i++, j--) {';
+  function palWalkProg() {
+    return prog([head(['int a[100], n, i, j;']), BL, READ_A, BL,
+      {tag: 'new', lines: [FOR2, '        // check a[i] and a[j] here', '    }']}, BL, END]);
+  }
+  /* the three jobs of the for line: start, test, and move both variables */
+  function forStart(R, P, L, v, W, extra) {
+    v.i = 0; v.j = v.a.length - 1;
+    R.put(P, L, '~i = 0~ and ~j = n - 1 = ' + v.j + '~: the first box and the last box.', v, W(), extra);
+  }
+  function forTest(R, P, L, v, W, extra, pass) {
+    var ok = v.i < v.j;
+    R.put(P, L, 'Is ~' + v.i + ' < ' + v.j + '~?' + (ok ? '' : ' No, so the loop ends.'), v, W(),
+      Object.assign({}, extra, {cond: {ok: ok}, grp: ok ? 'pass ' + pass : ''}));
+    return ok;
+  }
+  function forMove(R, P, L, v, W, extra, pass) {
+    v.cur = null; v.i++; v.j--;
+    R.put(P, L, '~i++~ and ~j--~. Now ~i = ' + v.i + '~ and ~j = ' + v.j + '~.', v, W(), Object.assign({}, extra, {grp: 'pass ' + pass}));
+  }
+  /* Step 3: the walk alone, with a comment where the check will go. */
+  function palWalk(a) {
+    var n = a.length, P = palWalkProg(), R = recorder(), L = P.at('for (i = 0, j = n - 1;');
+    var v = {a: a, i: n, j: null, cur: null, seen: [], ok: [], bad: []};
+    var W = function () { return [['n', n], ['i', q(v.i)], ['j', q(v.j)]]; };
+    R.put(P, P.at('scanf("%d", &n)'), 'Read ~n = ' + n + '~ and the ' + n + ' numbers. The read loop leaves ~i = ' + n + '~.', v, W());
+    forStart(R, P, L, v, W, {});
+    for (var pass = 1; forTest(R, P, L, v, W, {}, pass); pass++) {
+      v.cur = [v.i, v.j]; v.seen.push([v.i, v.j]);
+      R.put(P, P.at('// check'), 'This pass looks at ~a[' + v.i + ']~ and ~a[' + v.j + ']~.', v, W(), {grp: 'pass ' + pass});
+      forMove(R, P, L, v, W, {}, pass);
+    }
+    var pairs = v.seen.map(function (p) { return '(' + p[0] + ', ' + p[1] + ')'; }).join(' ');
+    R.put(P, P.at('return 0;'), v.seen.length ? 'Done. We looked at these pairs: ' + pairs + '. They are the checks of step 2.'
+      : 'Done. The loop did not run: one box has no pair.', v, W());
+    return R.S;
+  }
+
+  var PRINT_YN = ['', '    if (f == 1)', '        printf("Yes\\n");', '    else', '        printf("No\\n");'];
+  function palFaultyProg() {
+    return prog([head(['int a[100], n, i, j, f;']), BL, READ_A, BL,
+      {lines: ['    f = 0;', FOR2, '        if (a[i] == a[j])', '            f = 1;', '        else', '            f = 0;', '    }'].concat(PRINT_YN)}, BL, END]);
+  }
+  function palRealProg() {
+    return prog([head(['int a[100], n, i, j, f;']), BL, READ_A, BL,
+      {lines: ['    f = 1;          // no mismatch yet', FOR2, '        if (a[i] != a[j]) {', '            f = 0;  // found one',
+        '            break;', '        }', '    }'].concat(PRINT_YN)}, BL, END]);
+  }
+  function palEnd(R, P, v, W, put) {
+    var yes = v.f === 1;
+    put(P.at('if (f == 1)'), 'Is ~f == 1~? ~f~ is ' + v.f + '.', {cond: {ok: yes}});
+    return yes;
+  }
+
+  /* Step 4: the faulty code. The last pair decides f. */
+  function palFaulty(a) {
+    var n = a.length, P = palFaultyProg(), R = recorder(), L = P.at('for (i = 0, j = n - 1;');
+    var v = {a: a, i: n, j: null, f: null, cur: null, ok: [], bad: []}, o = {out: ''};
+    var W = function () { return [['n', n], ['i', q(v.i)], ['j', q(v.j)], ['f', q(v.f)]]; };
+    var put = function (l, say, extra) { R.put(P, l, say, v, W(), Object.assign({out: o.out}, extra || {})); };
+    put(P.at('scanf("%d", &n)'), 'Read ~n = ' + n + '~ and the ' + n + ' numbers.');
+    v.f = 0; put(P.at('f = 0;'), '~f = 0~.');
+    forStart(R, P, L, v, W, o);
+    for (var pass = 1; forTest(R, P, L, v, W, o, pass); pass++) {
+      var g = {grp: 'pass ' + pass}, eq = a[v.i] === a[v.j];
+      v.cur = [v.i, v.j];
+      put(P.at('if (a[i] == a[j])'), 'Is ~a[' + v.i + '] == a[' + v.j + ']~? The values are ' + a[v.i] + ' and ' + a[v.j] + '.', Object.assign({cond: {ok: eq}}, g));
+      if (eq) { v.f = 1; v.ok.push(v.i, v.j); put(P.at('f = 1;'), 'They match, so ~f = 1~.', g); }
+      else { v.f = 0; v.bad.push(v.i, v.j); put(P.at('f = 0;', 'else'), 'They do not match, so ~f = 0~.', g); }
+      forMove(R, P, L, v, W, o, pass);
+    }
+    var yes = palEnd(R, P, v, W, put);
+    o.out = yes ? 'Yes\n' : 'No\n';
+    put(P.at(yes ? 'printf("Yes' : 'printf("No'), 'It prints ' + (yes ? 'Yes' : 'No') + '.');
+    var got = yes ? 'Yes' : 'No', right = palRight(a);
+    v.verdict = {got: got, right: right};
+    put(P.at('return 0;'), got === right
+      ? 'This code printed ' + got + '. That is right for this array. Try another array.'
+      : 'This code printed ' + got + '. The right answer is ' + right + '. You found a counter-example!');
+    return R.S;
+  }
+
+  /* Step 5: look for the opposite — one pair that does not match. */
+  function palReal(a) {
+    var n = a.length, P = palRealProg(), R = recorder(), L = P.at('for (i = 0, j = n - 1;');
+    var v = {a: a, i: n, j: null, f: null, cur: null, ok: [], bad: []}, o = {out: ''};
+    var W = function () { return [['n', n], ['i', q(v.i)], ['j', q(v.j)], ['f', q(v.f)]]; };
+    var put = function (l, say, extra) { R.put(P, l, say, v, W(), Object.assign({out: o.out}, extra || {})); };
+    put(P.at('scanf("%d", &n)'), 'Read ~n = ' + n + '~ and the ' + n + ' numbers.');
+    v.f = 1; put(P.at('f = 1;'), '~f = 1~: we have not found a mismatch yet.');
+    forStart(R, P, L, v, W, o);
+    for (var pass = 1; forTest(R, P, L, v, W, o, pass); pass++) {
+      var g = {grp: 'pass ' + pass}, ne = a[v.i] !== a[v.j];
+      v.cur = [v.i, v.j];
+      put(P.at('if (a[i] != a[j])'), 'Is ~a[' + v.i + '] != a[' + v.j + ']~? The values are ' + a[v.i] + ' and ' + a[v.j] + '.', Object.assign({cond: {ok: ne}}, g));
+      if (ne) {
+        v.bad.push(v.i, v.j);
+        v.f = 0; put(P.at('f = 0;'), 'They are different. ~f = 0~. One mismatch is enough.', g);
+        put(P.at('break;'), '~break~ leaves the loop now. We do not check the other pairs.', g);
+        break;
+      }
+      v.ok.push(v.i, v.j);
+      forMove(R, P, L, v, W, o, pass);
+    }
+    var yes = palEnd(R, P, v, W, put);
+    o.out = yes ? 'Yes\n' : 'No\n';
+    put(P.at(yes ? 'printf("Yes' : 'printf("No'), 'It prints ' + (yes ? 'Yes' : 'No') + '.');
+    put(P.at('return 0;'), yes ? 'Every pair matched. The array is a palindrome.' : 'One pair did not match. The array is not a palindrome.');
+    return R.S;
+  }
+
+  /* =================== TAB 2 · SELECTION SORT =================== */
+  var SWAP_I = ['    temp = a[i];', '    a[i] = a[minIdx];', '    a[minIdx] = temp;'];
+  function roundLines(s, mode) {
+    if (mode === 'var') return ['    i = ' + s + ';           // where the part starts', '    minIdx = i;',
+      '    for (j = i + 1; j < n; j++) {', '        if (a[j] < a[minIdx])', '            minIdx = j;', '    }'].concat(SWAP_I);
+    var t = mode === 'lit3' ? 'changed' : 'new';
+    var r = mode === 'lit3' ? null : 'new';
+    return [['    minIdx = ' + s + ';', t], ['    for (j = ' + (s + 1) + '; j < n; j++) {', t], ['        if (a[j] < a[minIdx])', r],
+      ['            minIdx = j;', r], ['    }', r], ['    temp = a[' + s + '];', t], ['    a[' + s + '] = a[minIdx];', t],
+      ['    a[minIdx] = temp;', r]];
+  }
+  function sortRoundProg(s, mode) {
+    return prog([head(['int a[100], n, i, j, minIdx, temp;']), BL, READ_A, BL,
+      {lines: roundLines(s, mode)}, BL, printBlock('a', 'n'), BL, END]);
+  }
+  function sortView(a) { return {arr: a.slice(), i: null, j: null, min: null, cmp: null, swap: null, temp: null, fin: [], from: 0, part: false}; }
+
+  /* one round on the part from s: find the smallest, swap it into box s */
+  function inner(P, R, v, n, s, W, outRef, grp, isVar) {
+    var a = v.arr;
+    var put = function (l, say, extra) { R.put(P, l, say, v, W(), Object.assign({out: outRef.out, grp: grp}, extra || {})); };
+    v.min = s;
+    put(P.at('minIdx = '), '~minIdx = ' + s + '~. Guess: ~a[' + s + ']~ is the smallest' + (s ? ' of the part.' : '.'));
+    var first = true;
+    for (var j = s + 1; ; j++) {
+      v.j = j;
+      var ok = j < n;
+      put(P.at('for (j = '), (first ? '~j = ' + j + '~.' : '~j++~, so ~j = ' + j + '~.') + ' Is ~' + j + ' < ' + n + '~?' + (ok ? '' : ' No. The search is done.'), {cond: {ok: ok}});
+      first = false;
+      if (!ok) break;
+      var less = a[j] < a[v.min];
+      v.cmp = [j, v.min];
+      put(P.at('if (a[j] < a[minIdx])'), 'Is ~a[' + j + '] < a[' + v.min + ']~? The values are ' + a[j] + ' and ' + a[v.min] + '.', {cond: {ok: less}});
+      if (less) { v.min = j; v.cmp = null; put(P.at('minIdx = j;'), '~minIdx = ' + j + '~. The smallest so far is ' + a[j] + '.'); }
+      v.cmp = null;
+    }
+    var m = v.min, w = isVar ? 'i' : String(s);
+    v.swap = [s, m]; v.temp = a[s];
+    put(P.at('temp = a['), '~temp = a[' + w + ']~. Save ' + a[s] + '.' + (m === s ? ' (The smallest is already in box ' + s + '.)' : ''));
+    a[s] = a[m];
+    put(P.at('a[' + w + '] = a[minIdx];'), '~a[' + w + '] = a[minIdx]~. Box ' + s + ' gets ' + a[s] + '.');
+    a[m] = v.temp;
+    put(P.at('a[minIdx] = temp;'), '~a[minIdx] = temp~. Box ' + m + ' gets ' + v.temp + '.' + (m === s ? ' Nothing changed.' : ''));
+    v.swap = null;
+  }
+
+  /* steps 2, 3 and 4: one round, with numbers (lit0, lit3) or with i (var) */
+  function sortRound(a, s, mode) {
+    var n = a.length, P = sortRoundProg(s, mode), R = recorder(), v = sortView(a), o = {out: ''};
+    v.i = n; v.from = s; v.part = s > 0;
+    var W = function () {
+      var w = [['n', n]];
+      if (mode === 'var') w.push(['i', q(v.i)]);
+      return w.concat([['j', q(v.j)], ['minIdx', q(v.min)], ['temp', q(v.temp)]]);
+    };
+    R.put(P, P.at('scanf("%d", &n)'), 'Read ~n = ' + n + '~ and the ' + n + ' numbers.', v, W(), {out: ''});
+    if (mode === 'var') {
+      v.i = s;
+      R.put(P, P.at('i = ' + s + ';'), '~i = ' + s + '~. This round works on the part from box ' + s + '.', v, W(), {out: ''});
+    }
+    inner(P, R, v, n, s, W, o, '', mode === 'var');
+    v.fin = [s];
+    v.i = n;
+    o.out = v.arr.join(' ') + ' \n';
+    R.put(P, P.at('for (i = 0; i < n; i++)', 'a[minIdx] = temp;'), 'Print the array.', v, W(), {out: o.out});
+    R.put(P, P.at('return 0;'), 'Box ' + s + ' now holds the smallest' + (s ? ' of the part from ' + s : '') + '. It is in its final place.', v, W(), {out: o.out});
+    return R.S;
+  }
+
+  function sortFullProg() {
+    return prog([head(['int a[100], n, i, j, minIdx, temp;']), BL, READ_A, BL,
+      {lines: [['    for (i = 0; i < n - 1; i++) {', 'new'], '        minIdx = i;', '        for (j = i + 1; j < n; j++) {',
+        '            if (a[j] < a[minIdx])', '                minIdx = j;', '        }', '        temp = a[i];', '        a[i] = a[minIdx];',
+        '        a[minIdx] = temp;', ['    }', 'new']]}, BL, printBlock('a', 'n'), BL, END]);
+  }
+  function sortFull(a) {
+    var n = a.length, P = sortFullProg(), R = recorder(), v = sortView(a), o = {out: ''};
+    v.i = n; v.passes = []; v.compares = 0;
+    var W = function () { return [['n', n], ['i', q(v.i)], ['j', q(v.j)], ['minIdx', q(v.min)], ['temp', q(v.temp)]]; };
+    R.put(P, P.at('scanf("%d", &n)'), 'Read ~n = ' + n + '~ and the ' + n + ' numbers.', v, W(), {out: ''});
+    for (var i = 0; ; i++) {
+      v.i = i; v.from = i; v.part = true;
+      var ok = i < n - 1, g = ok ? 'round ' + (i + 1) : '';
+      R.put(P, P.at('for (i = 0; i < n - 1; i++)'), (i === 0 ? '~i = 0~.' : '~i++~, so ~i = ' + i + '~.') + ' Is ~' + i + ' < ' + (n - 1) + '~?' + (ok ? ' Round ' + (i + 1) + ' starts.' : ' No. All rounds are done.'),
+        v, W(), {cond: {ok: ok}, grp: g, out: ''});
+      if (!ok) break;
+      inner(P, R, v, n, i, W, o, g, true);
+      v.fin.push(i);
+      v.passes.push({r: i + 1, arr: v.arr.slice(), sw: [i, v.min]});
+      R.put(P, P.at('    }', 'a[minIdx] = temp;'), 'Round ' + (i + 1) + ' is done. Box ' + i + ' is final.', v, W(), {grp: g, out: ''});
+    }
+    v.fin.push(n - 1); v.part = false; v.i = n;
+    o.out = v.arr.join(' ') + ' \n';
+    R.put(P, P.at('for (i = 0; i < n; i++)', 'a[minIdx] = temp;'), 'Print the array.', v, W(), {out: o.out});
+    R.put(P, P.at('return 0;'), 'Sorted. The last box needed no round of its own.', v, W(), {out: o.out});
+    return R.S;
+  }
+
+  /* =================== TAB 3 · COPY AND REMOVE =================== */
+  var DECL_C = ['int a[100], b[100], c[200];'];
+  function copyView(A, B) {
+    var K = A.length + B.length;
+    return {A: A, B: B, c: new Array(K).fill(null), org: new Array(K).fill(null), arrow: null, ai: null, bi: null, cj: null, ci: null};
+  }
+
+  /* step 2: c[0] = a[0]; c[1] = a[1]; ... then the same as a loop */
+  function copyA(A, B) {
+    var n = A.length, m = B.length, R = recorder(), v = copyView(A, B);
+    var hand = function (upTo) {
+      var L = [];
+      for (var k = 0; k <= upTo; k++) L.push(['    c[' + k + '] = a[' + k + '];', k === upTo ? 'new' : null]);
+      return L;
+    };
+    var decl = DECL_C.concat(['int n, m, i;']);
+    var P0 = prog([head(decl), BL, READ_AB, BL, END]);
+    var W = function () { return [['n', n], ['m', m], ['i', q(v.i)]]; };
+    v.i = m;
+    R.put(P0, P0.at('scanf("%d", &n)'), 'Read a and b. Now we copy a into c, one line per box.', v, W());
+    var Ph = null;
+    for (var k = 0; k < n; k++) {
+      Ph = prog([head(decl), BL, READ_AB, BL, {lines: hand(k)}, BL, END]);
+      v.c[k] = A[k]; v.org[k] = 'a'; v.arrow = {src: 'a', i: k, to: k};
+      R.put(Ph, Ph.at('c[' + k + '] = a[' + k + '];'), '~c[' + k + '] = a[' + k + ']~. Copy ' + A[k] + '.', v, W(), {grp: 'by hand'});
+    }
+    v.arrow = null;
+    var loop = [['    for (i = 0; i < n; i++)', 'new'], ['        c[i] = a[i];', 'new']];
+    var hs = []; for (k = 0; k < n; k++) hs.push('    c[' + k + '] = a[' + k + '];');
+    var Pd = prog([head(decl), BL, READ_AB, BL, {struck: true, lines: hs}, {lines: loop}, BL, END]);
+    R.put(Pd, Pd.at('for (i = 0; i < n; i++)', 'scanf("%d", &b[i])'), 'Only one number changes: 0, 1, 2 … It is the same on both sides. Call it ~i~. Two lines do the work of ' + n + '.', v, W(), {grp: 'by hand'});
+    var Pl = prog([head(decl), BL, READ_AB, BL, {lines: loop}, BL, END]);
+    v.c = v.c.map(function () { return null; }); v.org = v.org.map(function () { return null; });
+    var L_for = Pl.at('for (i = 0; i < n; i++)', 'scanf("%d", &b[i])');
+    for (var i = 0; ; i++) {
+      v.i = i; v.ai = i < n ? i : null; v.ci = i < n ? i : null;
+      var ok = i < n;
+      R.put(Pl, L_for, (i === 0 ? 'c is empty again. Now the loop does the work. ~i = 0~.' : '~i++~, so ~i = ' + i + '~.') + ' Is ~' + i + ' < ' + n + '~?', v, W(), {cond: {ok: ok}, grp: ok ? 'loop' : ''});
+      if (!ok) break;
+      v.c[i] = A[i]; v.org[i] = 'a'; v.arrow = {src: 'a', i: i, to: i};
+      R.put(Pl, Pl.at('c[i] = a[i];'), '~c[' + i + '] = a[' + i + ']~. Copy ' + A[i] + '.', v, W(), {grp: 'loop'});
+      v.arrow = null;
+    }
+    v.ai = null; v.ci = null;
+    R.put(Pl, Pl.at('return 0;'), 'The loop gives the same c as the hand-written lines.', v, W());
+    return {steps: R.S, hand: Ph, loop: Pl};
+  }
+
+  /* step 3: b goes into the second part of c */
+  function copyB(A, B) {
+    var n = A.length, m = B.length, R = recorder(), v = copyView(A, B);
+    var decl = DECL_C.concat(['int n, m, i, j;']);
+    var LOOP_A = {id: 'copya', fold: 'copy a into c (step 2)', lines: ['    for (i = 0; i < n; i++)', '        c[i] = a[i];']};
+    var W = function () { return [['n', n], ['m', m], ['i', q(v.i)], ['j', q(v.j)]]; };
+    var P0 = prog([head(decl), BL, READ_AB, BL, LOOP_A, BL, END]);
+    v.i = m;
+    R.put(P0, P0.at('scanf("%d", &n)'), 'Read a and b.', v, W());
+    for (var k = 0; k < n; k++) { v.c[k] = A[k]; v.org[k] = 'a'; }
+    v.i = n;
+    R.put(P0, P0.at('for (i = 0; i < n; i++)', 'scanf("%d", &b[i])'), 'The loop of step 2 copies a into ~c[0]~ to ~c[' + (n - 1) + ']~.', v, W());
+    var hand = function (upTo) {
+      var L = [];
+      for (var t = 0; t <= upTo; t++) L.push(['    c[' + (n + t) + '] = b[' + t + '];', t === upTo ? 'new' : null]);
+      return L;
+    };
+    var Ph = null;
+    for (k = 0; k < m; k++) {
+      Ph = prog([head(decl), BL, READ_AB, BL, LOOP_A, BL, {lines: hand(k)}, BL, END]);
+      v.c[n + k] = B[k]; v.org[n + k] = 'b'; v.arrow = {src: 'b', i: k, to: n + k};
+      R.put(Ph, Ph.at('c[' + (n + k) + '] = b[' + k + '];'), '~c[' + (n + k) + '] = b[' + k + ']~. Copy ' + B[k] + '.', v, W(), {grp: 'by hand'});
+    }
+    v.arrow = null;
+    var loop = [['    j = n;              // first free box of c', 'new'], ['    for (i = 0; i < m; i++) {', 'new'],
+      ['        c[j] = b[i];', 'new'], ['        j++;', 'new'], ['    }', 'new']];
+    var hs = []; for (k = 0; k < m; k++) hs.push('    c[' + (n + k) + '] = b[' + k + '];');
+    var Pd = prog([head(decl), BL, READ_AB, BL, LOOP_A, BL, {struck: true, lines: hs}, {lines: loop}, BL, END]);
+    R.put(Pd, Pd.at('j = n;'), 'Two numbers change now: ' + n + ', ' + (n + 1) + ' … for c and 0, 1 … for b. So we use two variables: ~j~ for c and ~i~ for b.', v, W(), {grp: 'by hand'});
+    var Pl = prog([head(decl), BL, READ_AB, BL, LOOP_A, BL, {lines: loop}, BL, END]);
+    for (k = n; k < n + m; k++) { v.c[k] = null; v.org[k] = null; }
+    v.j = n;
+    R.put(Pl, Pl.at('j = n;'), 'The second part of c is empty again. ~j = n = ' + n + '~: the first free box.', v, W(), {grp: 'loop'});
+    v.cj = n;
+    var L_for = Pl.at('for (i = 0; i < m; i++) {');
+    for (var i = 0; ; i++) {
+      v.i = i; v.bi = i < m ? i : null;
+      var ok = i < m;
+      R.put(Pl, L_for, (i === 0 ? '~i = 0~.' : '~i++~, so ~i = ' + i + '~.') + ' Is ~' + i + ' < ' + m + '~?', v, W(), {cond: {ok: ok}, grp: ok ? 'loop' : ''});
+      if (!ok) break;
+      v.c[v.j] = B[i]; v.org[v.j] = 'b'; v.arrow = {src: 'b', i: i, to: v.j};
+      R.put(Pl, Pl.at('c[j] = b[i];'), '~c[' + v.j + '] = b[' + i + ']~. Copy ' + B[i] + '.', v, W(), {grp: 'loop'});
+      v.arrow = null;
+      v.j++; v.cj = v.j < n + m ? v.j : n + m;
+      R.put(Pl, Pl.at('j++;'), '~j++~, so ~j = ' + v.j + '~.', v, W(), {grp: 'loop'});
+    }
+    v.bi = null; v.cj = null;
+    R.put(Pl, Pl.at('return 0;'), 'c now holds a and then b.', v, W());
+    return {steps: R.S, hand: Ph, loop: Pl};
+  }
+
+  /* step 4: reverse. c[0] = a[3]; c[1] = a[2]; ... then both loops backwards */
+  var REV_LOOPS = ['    j = 0;', '    for (i = n - 1; i >= 0; i--) {', '        c[j] = a[i];', '        j++;', '    }',
+    '    for (i = m - 1; i >= 0; i--) {', '        c[j] = b[i];', '        j++;', '    }', '    len = n + m;'];
+  function copyRev(A, B) {
+    var n = A.length, m = B.length, R = recorder(), v = copyView(A, B);
+    var decl = DECL_C.concat(['int n, m, len, i, j;']);
+    var W = function () { return [['n', n], ['m', m], ['i', q(v.i)], ['j', q(v.j)], ['len', q(v.len)]]; };
+    var P0 = prog([head(decl), BL, READ_AB, BL, END]);
+    v.i = m; v.len = null;
+    R.put(P0, P0.at('scanf("%d", &n)'), 'Read a and b. First, a backwards, one line per box.', v, W());
+    var hand = function (upTo) {
+      var L = [];
+      for (var t = 0; t <= upTo; t++) L.push(['    c[' + t + '] = a[' + (n - 1 - t) + '];', t === upTo ? 'new' : null]);
+      return L;
+    };
+    var Ph = null;
+    for (var k = 0; k < n; k++) {
+      Ph = prog([head(decl), BL, READ_AB, BL, {lines: hand(k)}, BL, END]);
+      v.c[k] = A[n - 1 - k]; v.org[k] = 'a'; v.arrow = {src: 'a', i: n - 1 - k, to: k};
+      R.put(Ph, Ph.at('c[' + k + '] = a[' + (n - 1 - k) + '];'), '~c[' + k + '] = a[' + (n - 1 - k) + ']~. Copy ' + A[n - 1 - k] + '.', v, W(), {grp: 'by hand'});
+    }
+    v.arrow = null;
+    var hs = []; for (k = 0; k < n; k++) hs.push('    c[' + k + '] = a[' + (n - 1 - k) + '];');
+    var tagged = REV_LOOPS.map(function (t) { return [t, 'new']; });
+    var Pd = prog([head(decl), BL, READ_AB, BL, {struck: true, lines: hs}, {lines: tagged}, BL, END]);
+    R.put(Pd, Pd.at('j = 0;'), 'The left number goes up: 0, 1, 2 … The right one goes down. Two variables again: ~j~ goes up on c, ~i~ goes down on a. Then the same for b.', v, W(), {grp: 'by hand'});
+    var Pl = prog([head(decl), BL, READ_AB, BL, {lines: tagged}, BL, END]);
+    v.c = v.c.map(function () { return null; }); v.org = v.org.map(function () { return null; });
+    v.j = 0; v.cj = 0;
+    R.put(Pl, Pl.at('j = 0;'), 'c is empty again. ~j = 0~: write from the first box of c.', v, W());
+    var run = function (arr, len, name, L_for, L_body, grpName) {
+      for (var i = len - 1; ; i--) {
+        v.i = i;
+        if (name === 'a') v.ai = i >= 0 ? i : null; else v.bi = i >= 0 ? i : null;
+        var ok = i >= 0;
+        var ask = !ok && name === 'a' ? ' a is done. ~j~ is ' + v.j + ', the next free box.' : '';
+        R.put(Pl, L_for, (i === len - 1 ? '~i = ' + (len - 1) + '~, the last box of ' + name + '.' : '~i--~, so ~i = ' + i + '~.') + ' Is ~' + i + ' >= 0~?' + ask,
+          v, W(), {cond: {ok: ok}, grp: ok ? grpName : ''});
+        if (!ok) break;
+        v.c[v.j] = arr[i]; v.org[v.j] = name; v.arrow = {src: name, i: i, to: v.j};
+        R.put(Pl, L_body, '~c[' + v.j + '] = ' + name + '[' + i + ']~. Copy ' + arr[i] + '.', v, W(), {grp: grpName});
+        v.arrow = null;
+        v.j++; v.cj = Math.min(v.j, n + m);
+        R.put(Pl, Pl.at('j++;', L_body), '~j++~, so ~j = ' + v.j + '~.', v, W(), {grp: grpName});
+      }
+      v.ai = null; v.bi = null;
+    };
+    run(A, n, 'a', Pl.at('for (i = n - 1; i >= 0; i--)'), Pl.at('c[j] = a[i];'), 'a');
+    run(B, m, 'b', Pl.at('for (i = m - 1; i >= 0; i--)'), Pl.at('c[j] = b[i];'), 'b');
+    v.cj = null; v.len = n + m;
+    R.put(Pl, Pl.at('len = n + m;'), '~len = ' + (n + m) + '~: the size of c.', v, W());
+    R.put(Pl, Pl.at('return 0;'), 'c holds a backwards, then b backwards.', v, W());
+    return {steps: R.S, hand: Ph, loop: Pl};
+  }
+  function revJoin(A, B) { return A.slice().reverse().concat(B.slice().reverse()); }
+
+  var REV_FOLD = {id: 'copy', fold: 'copy a and b into c, backwards (step 4)', lines: REV_LOOPS};
+  var DECL_D = ['int a[100], b[100], c[200], d[200];', 'int n, m, len, i, j, k;'];
+  function removeView(A, B) {
+    var c = revJoin(A, B);
+    return {c: c, d: new Array(c.length).fill(null), i: null, j: null, k: null, kept: [], skip: [], look: null, arrow: null};
+  }
+
+  /* step 5: Jamil's version — keep c[i], then let k walk over the same values */
+  function removeAheadProg() {
+    return prog([head(DECL_D), BL, READ_AB, BL, REV_FOLD, BL,
+      {tag: 'new', lines: ['    j = 0;', '    for (i = 0; i < len; i++) {', '        d[j] = c[i];        // keep it',
+        '        k = i;', '        while (k < len && c[k] == d[j])', '            k++;            // skip the same',
+        '        i = k - 1;', '        j++;', '    }']}, BL, printBlock('d', 'j'), BL, END]);
+  }
+  function removeAhead(A, B) {
+    var n = A.length, m = B.length, len = n + m, P = removeAheadProg(), R = recorder(), v = removeView(A, B), out = '';
+    var c = v.c, x = {};
+    var W = function () { return [['len', q(x.len)], ['i', q(x.i)], ['j', q(x.j)], ['k', q(x.k)]]; };
+    var put = function (l, say, extra) { v.i = x.ci; v.k = x.ck; v.j = x.dj; R.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    x.i = m;
+    put(P.at('scanf("%d", &n)'), 'Read a and b.');
+    x.len = len; x.i = -1; x.j = len;
+    put(P.at('j = 0;'), 'The code of step 4 fills c. ~len = ' + len + '~.');
+    x.j = 0; x.dj = 0;
+    put(P.at('j = 0;', 'len = n + m;'), '~j = 0~: d is empty, so we write into ~d[0]~ first.');
+    var L_for = P.at('for (i = 0; i < len; i++)'), round = 0;
+    for (x.i = 0; ; ) {
+      var ok = x.i < len; if (ok) round++;
+      var g = ok ? 'run ' + round : '';
+      x.ci = ok ? x.i : null; x.ck = null;
+      put(L_for, (round === 1 && ok ? '~i = 0~.' : '~i++~, so ~i = ' + x.i + '~.') + ' Is ~' + x.i + ' < ' + len + '~?', {cond: {ok: ok}, grp: g});
+      if (!ok) break;
+      v.d[x.j] = c[x.i]; v.kept.push(x.i); v.arrow = {from: x.i, to: x.j};
+      put(P.at('d[j] = c[i];'), '~d[' + x.j + '] = c[' + x.i + ']~. Keep ' + c[x.i] + '.', {grp: g});
+      v.arrow = null;
+      x.k = x.i; x.ck = x.k;
+      put(P.at('k = i;'), '~k = ' + x.k + '~. ~k~ walks ahead over the same values.', {grp: g});
+      for (;;) {
+        var inside = x.k < len, same = inside && c[x.k] === v.d[x.j];
+        v.look = inside ? [x.k, x.j] : null;
+        put(P.at('while (k < len'), inside ? 'Is ~k < ' + len + '~ and ~c[' + x.k + '] == d[' + x.j + ']~? The values are ' + c[x.k] + ' and ' + v.d[x.j] + '.'
+          : 'Is ~k < ' + len + '~? No, ~k~ is ' + x.k + '. c has ended, so ~c[k]~ is not read.', {cond: {ok: same}, grp: g});
+        v.look = null;
+        if (!same) break;
+        if (x.k !== x.i) v.skip.push(x.k);
+        x.k++; x.ck = x.k;
+        put(P.at('k++;'), '~k++~, so ~k = ' + x.k + '~.', {grp: g});
+      }
+      x.i = x.k - 1; x.ci = x.i;
+      put(P.at('i = k - 1;'), '~i = k - 1 = ' + x.i + '~. The ~i++~ of the for loop will move it to ' + x.k + '.', {grp: g});
+      x.j++; x.dj = x.j;
+      put(P.at('j++;', 'i = k - 1;'), '~j++~, so ~j = ' + x.j + '~: the next free box of d.', {grp: g});
+      x.i++;
+    }
+    x.ci = null; x.ck = null;
+    out = v.d.slice(0, x.j).join(' ') + ' \n';
+    x.i = x.j;
+    put(P.at('for (i = 0; i < j; i++)'), 'Print ~d[0]~ to ~d[' + (x.j - 1) + ']~.');
+    put(P.at('return 0;'), 'd has ' + x.j + ' values. Each run of the same value is now one value.');
+    return R.S;
+  }
+
+  /* step 6: another way — keep c[i] when it differs from the box before it */
+  function removeBackProg() {
+    return prog([head(DECL_D), BL, READ_AB, BL, REV_FOLD, BL,
+      {tag: 'new', lines: ['    d[0] = c[0];', '    j = 1;', '    for (i = 1; i < len; i++) {',
+        '        if (c[i] != c[i - 1]) {   // not the same', '            d[j] = c[i];', '            j++;', '        }', '    }']},
+      BL, printBlock('d', 'j'), BL, END]);
+  }
+  function removeBack(A, B) {
+    var n = A.length, m = B.length, len = n + m, P = removeBackProg(), R = recorder(), v = removeView(A, B), out = '';
+    var c = v.c, x = {};
+    var W = function () { return [['len', q(x.len)], ['i', q(x.i)], ['j', q(x.j)]]; };
+    var put = function (l, say, extra) { v.i = x.ci; v.j = x.dj; R.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    x.i = m;
+    put(P.at('scanf("%d", &n)'), 'Read a and b.');
+    x.len = len; x.i = -1; x.j = len;
+    put(P.at('j = 0;'), 'The code of step 4 fills c. ~len = ' + len + '~.');
+    v.d[0] = c[0]; v.kept.push(0); v.arrow = {from: 0, to: 0};
+    put(P.at('d[0] = c[0];'), '~d[0] = c[0]~. The first value is always kept.');
+    v.arrow = null;
+    x.j = 1; x.dj = 1;
+    put(P.at('j = 1;'), '~j = 1~: the next free box of d.');
+    var L_for = P.at('for (i = 1; i < len; i++)');
+    for (x.i = 1; ; x.i++) {
+      var ok = x.i < len; x.ci = ok ? x.i : null;
+      put(L_for, (x.i === 1 ? '~i = 1~.' : '~i++~, so ~i = ' + x.i + '~.') + ' Is ~' + x.i + ' < ' + len + '~?', {cond: {ok: ok}, grp: ok ? 'loop' : ''});
+      if (!ok) break;
+      var diff = c[x.i] !== c[x.i - 1];
+      v.look = [x.i - 1, x.i];
+      if (!diff) v.skip.push(x.i);
+      put(P.at('if (c[i] != c[i - 1])'), 'Is ~c[' + x.i + '] != c[' + (x.i - 1) + ']~? The values are ' + c[x.i] + ' and ' + c[x.i - 1] + '.' + (diff ? '' : ' Same, so skip it.'), {cond: {ok: diff}, grp: 'loop'});
+      v.look = null;
+      if (diff) {
+        v.d[x.j] = c[x.i]; v.kept.push(x.i); v.arrow = {from: x.i, to: x.j};
+        put(P.at('d[j] = c[i];'), '~d[' + x.j + '] = c[' + x.i + ']~. Keep ' + c[x.i] + '.', {grp: 'loop'});
+        v.arrow = null;
+        x.j++; x.dj = x.j;
+        put(P.at('j++;', 'd[j] = c[i];'), '~j++~, so ~j = ' + x.j + '~.', {grp: 'loop'});
+      }
+    }
+    x.ci = null;
+    out = v.d.slice(0, x.j).join(' ') + ' \n';
+    x.i = x.j;
+    put(P.at('for (i = 0; i < j; i++)'), 'Print ~d[0]~ to ~d[' + (x.j - 1) + ']~.');
+    put(P.at('return 0;'), 'The same d as the first way.');
+    return R.S;
+  }
+
+  return {parseList: parseList, palRight: palRight, revJoin: revJoin,
+    palPairs: palPairs, palWalk: palWalk, palFaulty: palFaulty, palReal: palReal,
+    palWalkProg: palWalkProg, palFaultyProg: palFaultyProg, palRealProg: palRealProg,
+    sortRound: sortRound, sortFull: sortFull, sortRoundProg: sortRoundProg, sortFullProg: sortFullProg,
+    copyA: copyA, copyB: copyB, copyRev: copyRev, removeAhead: removeAhead, removeBack: removeBack,
+    removeAheadProg: removeAheadProg, removeBackProg: removeBackProg};
+})();
+if (typeof module !== 'undefined') module.exports = LOGIC;
+
+</script>
+<script>
+"use strict";
+(function () {
+var $ = function (s, r) { return (r || document).querySelector(s); };
+var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var esc = function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+var fmt = function (s) { return esc(s || '').replace(/~([^~]+)~/g, '<code>$1</code>'); };
+
+/* ---------- syntax colours, the same token classes as the course site ---------- */
+function hl(t) {
+  var code = t, com = '', k = t.indexOf('//');
+  if (k >= 0) { code = t.slice(0, k); com = t.slice(k); }
+  var re = /("(?:[^"\\]|\\.)*")|(#include\s*<[^>]*>)|\b(int|for|while|if|else|return|break)\b|\b(printf|scanf|main)\b|\b(\d+)\b/g;
+  var out = '', last = 0, m;
+  while ((m = re.exec(code))) {
+    out += esc(code.slice(last, m.index));
+    var cls = m[1] ? 's' : (m[2] || m[3]) ? 'k' : m[4] ? 'f' : 'n';
+    out += '<span class="' + cls + '">' + esc(m[0]) + '</span>';
+    last = re.lastIndex;
+  }
+  out += esc(code.slice(last));
+  if (com) out += '<span class="c">' + esc(com) + '</span>';
+  return out;
+}
+function staticCode(text) { return text.split('\n').map(hl).join('\n'); }
+
+/* ---------- drawing ---------- */
+var CELL = {def: ['#fff', '#a5b4fc', '#1e1b4b'], empty: ['#fff', '#cbd5e1', '#cbd5e1', 1], look: ['#fffbeb', '#f59e0b', '#b45309'],
+  hit: ['#ecfdf5', '#34d399', '#047857'], bad: ['#fff1f2', '#fb7185', '#be123c'], dim: ['#f8fafc', '#e2e8f0', '#cbd5e1'],
+  fin: ['#d1fae5', '#059669', '#065f46'], a: ['#eef2ff', '#818cf8', '#3730a3'], b: ['#fff7ed', '#fb923c', '#9a3412'],
+  gone: ['#f1f5f9', '#cbd5e1', '#94a3b8'], swap: ['#fef3c7', '#d97706', '#92400e'], seen: ['#eef2ff', '#a5b4fc', '#3730a3']};
+var CHIP = {i: '#4f46e5', j: '#0284c7', k: '#d97706', min: '#059669'};
+var MONO = 'font-family="Fira Code,ui-monospace,SF Mono,Menlo,Consolas,monospace"';
+var SANS = 'font-family="Inter,-apple-system,Segoe UI,Roboto,sans-serif"';
+function txt(x, y, s, o) {
+  o = o || {};
+  return '<text x="' + x + '" y="' + y + '" ' + (o.sans ? SANS : MONO) + ' font-size="' + (o.fs || 14) + '" font-weight="' + (o.fw || 700) +
+    '" fill="' + (o.fill || '#1e1b4b') + '" text-anchor="' + (o.anchor || 'middle') + '" dominant-baseline="central">' + esc(s) + '</text>';
+}
+function box(x, y, w, val, kind, strike) {
+  var c = CELL[kind || 'def'];
+  var g = '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + w + '" rx="7" fill="' + c[0] + '" stroke="' + c[1] + '" stroke-width="2"' +
+    (c[3] ? ' stroke-dasharray="5 4"' : '') + '/>';
+  if (val !== null && val !== undefined && val !== '') g += txt(x + w / 2, y + w / 2 + 1, val, {fs: Math.round(w * 0.38), fw: 800, fill: c[2]});
+  if (strike) g += '<line x1="' + (x + 7) + '" y1="' + (y + w - 7) + '" x2="' + (x + w - 7) + '" y2="' + (y + 7) + '" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>';
+  return g;
+}
+function idxs(xs, y, from) { return xs.map(function (x, k) { return txt(x, y, (from || 0) + k, {fs: 11, fw: 700, fill: '#94a3b8'}); }).join(''); }
+/* a chip: below the row points up, above the row points down */
+function chip(cx, y, label, kind, down) {
+  var col = CHIP[kind] || '#475569', w = 14 + label.length * 9, h = 22;
+  var tri = down ? 'M' + (cx - 6) + ' ' + (y + h / 2) + ' L' + (cx + 6) + ' ' + (y + h / 2) + ' L' + cx + ' ' + (y + h / 2 + 7) + ' Z'
+                 : 'M' + (cx - 6) + ' ' + (y - h / 2) + ' L' + (cx + 6) + ' ' + (y - h / 2) + ' L' + cx + ' ' + (y - h / 2 - 7) + ' Z';
+  return '<path d="' + tri + '" fill="' + col + '"/><rect x="' + (cx - w / 2) + '" y="' + (y - h / 2) + '" width="' + w + '" height="' + h + '" rx="6" fill="' + col + '"/>' +
+    txt(cx, y + 1, label, {fs: 12, fw: 800, fill: '#fff'});
+}
+/* chips on the same box fan out so both stay visible */
+function chips(list, xOf, y, down) {
+  var by = {}, g = '';
+  list.forEach(function (c) { if (c && c.at !== null && c.at !== undefined) (by[c.at] = by[c.at] || []).push(c); });
+  Object.keys(by).forEach(function (at) {
+    by[at].forEach(function (c, t, arr) { g += chip(xOf(+at) + (t - (arr.length - 1) / 2) * 34, y, c.label, c.kind, down); });
+  });
+  return g;
+}
+function arrow(x1, y1, x2, y2, col) {
+  var a = Math.atan2(y2 - y1, x2 - x1), L = 10;
+  return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + (x2 - Math.cos(a) * 4) + '" y2="' + (y2 - Math.sin(a) * 4) + '" stroke="' + col + '" stroke-width="2.5"/>' +
+    '<path d="M' + x2 + ' ' + y2 + ' L' + (x2 - L * Math.cos(a - .45)) + ' ' + (y2 - L * Math.sin(a - .45)) + ' L' + (x2 - L * Math.cos(a + .45)) + ' ' + (y2 - L * Math.sin(a + .45)) + ' Z" fill="' + col + '"/>';
+}
+function arc(x1, x2, y, h, col, w) {
+  return '<path d="M' + x1 + ' ' + y + ' C' + x1 + ' ' + (y - h) + ' ' + x2 + ' ' + (y - h) + ' ' + x2 + ' ' + y + '" fill="none" stroke="' + col + '" stroke-width="' + (w || 2.5) + '"/>';
+}
+function svg(W, H, g) { return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" style="--W:' + W + 'px" xmlns="http://www.w3.org/2000/svg" role="img">' + g + '</svg>'; }
+var has = function (L, k) { return L && L.indexOf(k) >= 0; };
+function rowX(n, cw, gap, W) { var x0 = (W - (n * cw + (n - 1) * gap)) / 2, xs = []; for (var k = 0; k < n; k++) xs.push(x0 + k * (cw + gap)); return xs; }
+
+/* palindrome: one row, pairs as arcs above, i and j below */
+function drawPal(v) {
+  var a = v.a, n = a.length, cw = 50, gap = 9, W = Math.max(330, n * (cw + gap) + 70), y = 74;
+  var xs = rowX(n, cw, gap, W), cx = function (k) { return xs[k] + cw / 2; };
+  var g = txt(xs[0] - 14, y + cw / 2, 'a', {fs: 15, anchor: 'end', fill: '#64748b'});
+  (v.list || []).forEach(function (p) {
+    if (!v.cur || p[0] !== v.cur[0]) g += arc(cx(p[0]), cx(p[1]), y - 4, Math.min(62, 18 + (p[1] - p[0]) * 9), '#c7d2fe', 2);
+  });
+  if (v.cur && v.cur[0] !== v.cur[1]) {
+    var eq = a[v.cur[0]] === a[v.cur[1]];
+    var col = (v.list || v.seen) ? '#f59e0b' : (eq ? '#059669' : '#e11d48');
+    g += arc(cx(v.cur[0]), cx(v.cur[1]), y - 4, Math.min(62, 18 + (v.cur[1] - v.cur[0]) * 9), col, 3.5);
+  }
+  for (var k = 0; k < n; k++) {
+    var kind = 'def';
+    if (has(v.ok, k)) kind = 'hit';
+    if (has(v.bad, k)) kind = 'bad';
+    if (v.list && v.list.some(function (p) { return p[0] === k || p[1] === k; })) kind = 'seen';
+    if (has(v.seen && v.seen.reduce(function (s, p) { return s.concat(p); }, []), k)) kind = 'seen';
+    if (v.mid === k) kind = 'dim';
+    if (v.cur && (v.cur[0] === k || v.cur[1] === k)) kind = has(v.bad, k) ? 'bad' : 'look';
+    g += box(xs[k], y, cw, a[k], kind);
+  }
+  g += idxs(xs.map(function (x) { return x + cw / 2; }), y + cw + 12);
+  var inR = function (t) { return t !== null && t !== undefined && t >= 0 && t < n ? t : null; };
+  g += chips([{at: inR(v.i), label: 'i', kind: 'i'}, {at: inR(v.j), label: 'j', kind: 'j'}], cx, y + cw + 40);
+  return svg(W, y + cw + 62, g);
+}
+
+/* sort: one row, min above, j and i below, temp in the corner */
+function drawSort(v, showI) {
+  var a = v.arr, n = a.length, cw = 50, gap = 9, W = Math.max(380, n * (cw + gap) + 70), y = 70;
+  var xs = rowX(n, cw, gap, W), cx = function (k) { return xs[k] + cw / 2; }, g = '';
+  if (v.part) {
+    var x1 = xs[v.from] - 5, x2 = xs[n - 1] + cw + 5;
+    g += '<rect x="' + x1 + '" y="' + (y - 6) + '" width="' + (x2 - x1) + '" height="' + (cw + 12) + '" rx="10" fill="none" stroke="#818cf8" stroke-width="2" stroke-dasharray="6 4"/>';
+    g += txt(x1 + 4, 14, 'the part from ' + v.from, {fs: 11, fw: 800, fill: '#6366f1', anchor: 'start', sans: true});
+  }
+  for (var k = 0; k < n; k++) {
+    var kind = 'def';
+    if (v.part && k < v.from) kind = 'dim';
+    if (v.min === k) kind = 'hit';
+    if (v.cmp && v.cmp[0] === k) kind = 'look';
+    if (has(v.fin, k)) kind = 'fin';
+    if (v.swap && has(v.swap, k)) kind = 'swap';
+    g += box(xs[k], y, cw, a[k], kind);
+  }
+  g += idxs(xs.map(function (x) { return x + cw / 2; }), y + cw + 12);
+  var inR = function (t) { return t !== null && t !== undefined && t >= 0 && t < n ? t : null; };
+  g += chips([{at: inR(v.min), label: 'min', kind: 'min'}], cx, y - 24, true);
+  g += chips([{at: inR(v.j), label: 'j', kind: 'j'}], cx, y + cw + 40);
+  if (showI) g += chips([{at: inR(v.i), label: 'i', kind: 'i'}], cx, y + cw + 72);
+  var ty = y + cw + (showI ? 92 : 64), tx = xs[n - 1] + cw - 44, mx = tx - 112;
+  var none = function (x) { return x === null || x === undefined; };
+  g += txt(mx - 10, ty + 22, 'minIdx', {fs: 12, fw: 800, fill: '#047857', anchor: 'end', sans: true});
+  g += box(mx, ty, 44, v.min, none(v.min) ? 'empty' : 'hit');
+  g += txt(tx - 10, ty + 22, 'temp', {fs: 12, fw: 800, fill: '#64748b', anchor: 'end', sans: true});
+  g += box(tx, ty, 44, v.temp, none(v.temp) ? 'empty' : 'swap');
+  if (v.swap && v.swap[0] !== v.swap[1]) g += txt(xs[0], ty + 64, 'swap a[' + v.swap[0] + '] and a[' + v.swap[1] + ']', {fs: 12, fw: 800, fill: '#b45309', anchor: 'start', sans: true});
+  return svg(W, ty + 76, g);
+}
+
+/* copy: a and b on top, c below with every box drawn from the start */
+function drawCopy(v) {
+  var n = v.A.length, m = v.B.length, K = n + m, cw = 40, gap = 6, sep = 26;
+  var W = Math.max(380, K * (cw + gap) + sep + 80), y = 50, y2 = y + cw + 92;
+  var tw = K * (cw + gap) - gap + sep, x0 = (W - tw) / 2;
+  var ax = [], bx = [], cxs = rowX(K, cw, gap, W), k;
+  for (k = 0; k < n; k++) ax.push(x0 + k * (cw + gap));
+  for (k = 0; k < m; k++) bx.push(x0 + n * (cw + gap) + sep + k * (cw + gap));
+  var g = txt(ax[0] - 10, y + cw / 2, 'a', {fs: 15, anchor: 'end', fill: '#4f46e5'}) + txt(bx[0] - 8, y + cw / 2, 'b', {fs: 15, anchor: 'end', fill: '#ea580c'}) +
+          txt(cxs[0] - 10, y2 + cw / 2, 'c', {fs: 15, anchor: 'end', fill: '#475569'});
+  for (k = 0; k < n; k++) g += box(ax[k], y, cw, v.A[k], v.arrow && v.arrow.src === 'a' && v.arrow.i === k ? 'look' : 'a');
+  for (k = 0; k < m; k++) g += box(bx[k], y, cw, v.B[k], v.arrow && v.arrow.src === 'b' && v.arrow.i === k ? 'look' : 'b');
+  g += idxs(ax.map(function (x) { return x + cw / 2; }), y + cw + 11) + idxs(bx.map(function (x) { return x + cw / 2; }), y + cw + 11);
+  for (k = 0; k < K; k++) {
+    var val = v.c[k], kind = val === null ? 'empty' : v.org[k];
+    if (v.arrow && v.arrow.to === k) kind = 'look';
+    g += box(cxs[k], y2, cw, val, kind);
+  }
+  g += idxs(cxs.map(function (x) { return x + cw / 2; }), y2 + cw + 11);
+  if (v.arrow) {
+    var sx = (v.arrow.src === 'a' ? ax[v.arrow.i] : bx[v.arrow.i]) + cw / 2;
+    g += arrow(sx, y + cw + 20, cxs[v.arrow.to] + cw / 2, y2 - 6, '#7c3aed');
+  }
+  var cxA = function (t) { return ax[t] + cw / 2; }, cxB = function (t) { return bx[t] + cw / 2; };
+  var cxC = function (t) { return t < K ? cxs[t] + cw / 2 : cxs[K - 1] + cw / 2 + cw + gap; };
+  g += chips([{at: v.ai, label: 'i', kind: 'i'}], cxA, y - 22, true);
+  g += chips([{at: v.bi, label: 'i', kind: 'i'}], cxB, y - 22, true);
+  g += chips([{at: v.cj, label: 'j', kind: 'j'}, {at: v.ci, label: 'i', kind: 'i'}], cxC, y2 + cw + 38);
+  return svg(W, y2 + cw + 60, g);
+}
+
+/* remove: c on top with i and k above it, d below with j under it */
+function drawRemove(v, back) {
+  var K = v.c.length, cw = 42, gap = 7, W = Math.max(380, K * (cw + gap) + 110), y = 86, y2 = y + cw + 82;
+  var xs = rowX(K, cw, gap, W), cx = function (t) { return t < K ? xs[t] + cw / 2 : xs[K - 1] + cw / 2 + cw + gap; }, g = '';
+  g += txt(xs[0] - 10, y + cw / 2, 'c', {fs: 15, anchor: 'end', fill: '#475569'}) + txt(xs[0] - 10, y2 + cw / 2, 'd', {fs: 15, anchor: 'end', fill: '#047857'});
+  for (var k = 0; k < K; k++) {
+    var kind = 'def';
+    if (has(v.kept, k)) kind = 'hit';
+    if (has(v.skip, k)) kind = 'gone';
+    if (v.look && (back ? has(v.look, k) : v.look[0] === k)) kind = 'look';
+    g += box(xs[k], y, cw, v.c[k], kind, has(v.skip, k));
+    var dv = v.d[k];
+    g += box(xs[k], y2, cw, dv, dv === null ? 'empty' : (!back && v.look && v.look[1] === k ? 'look' : 'hit'));
+  }
+  if (K && v.k === K) g += '<rect x="' + (xs[K - 1] + cw + gap) + '" y="' + y + '" width="' + cw + '" height="' + cw + '" rx="7" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="4 4"/>' +
+    txt(xs[K - 1] + cw + gap + cw / 2, y + cw / 2, 'end', {fs: 10, fill: '#94a3b8', sans: true});
+  g += idxs(xs.map(function (x) { return x + cw / 2; }), y + cw + 11) + idxs(xs.map(function (x) { return x + cw / 2; }), y2 + cw + 11);
+  if (v.arrow) g += arrow(cx(v.arrow.from), y + cw + 20, cx(v.arrow.to), y2 - 6, '#7c3aed');
+  var inC = function (t) { return t !== null && t !== undefined && t >= 0 && t <= K ? t : null; };
+  g += chips([{at: inC(v.i) === K ? null : inC(v.i), label: 'i', kind: 'i'}], cx, y - 24, true);
+  if (!back) g += chips([{at: inC(v.k), label: 'k', kind: 'k'}], cx, y - 56, true);
+  g += chips([{at: inC(v.j) === K ? null : inC(v.j), label: 'j', kind: 'j'}], cx, y2 + cw + 38);
+  return svg(W, y2 + cw + 60, g);
+}
+
+/* ---------- one simulator: the course-site frame, our picture and listing ---------- */
+var COPYTXT = {};
+function mount(sel, cfg) {
+  var host = $(sel);
+  host.innerHTML = '<div class="sim">' +
+    '<div class="simhd"><span class="simttl">Simulator</span><span class="simnm">' + esc(cfg.name) + '</span><button class="focusb" type="button">⛶ Focus</button></div>' +
+    '<div class="simbd">' + (cfg.top || '') +
+      '<div class="simrail"></div>' +
+      '<div class="simrow two">' +
+        '<div class="simcol"><div class="simboard"><span class="plate">' + esc(cfg.plate || 'the array') + '</span><div class="simfig"></div></div><div class="simwatch"></div><div class="xtra"></div></div>' +
+        '<div class="simcol"><div class="cttl">' + (cfg.checks ? 'The checks we write' : 'The program <small>· click a folded line to open it</small>') + '</div>' +
+          (cfg.checks ? '<div class="checks"></div>' : '<div class="codewrap"><button class="cpy" type="button">Copy</button><pre class="code lines"></pre></div>') + '</div>' +
+      '</div>' +
+      '<div class="simctl"><button class="btn" data-k="next" type="button">Next ▸</button>' +
+        '<button class="btn ghost sm" data-k="play" data-off="▶ Play" data-on="❙❙ Pause" type="button">▶ Play</button>' +
+        '<button class="btn ghost sm" data-k="back" type="button">◂ Back</button><button class="btn ghost sm" data-k="reset" type="button">Reset</button>' +
+        '<span class="simcnt"></span><span class="simkeys"><kbd>n</kbd> <kbd>b</kbd> <kbd>p</kbd> <kbd>r</kbd></span></div>' +
+      '<div class="simmsg"><span class="smn">1</span><p></p></div>' +
+    '</div></div>';
+  var el = $('.sim', host), fig = $('.simfig', el), xtra = $('.xtra', el), pre = $('pre.code', el), chk = $('.checks', el);
+  var M = {steps: cfg.build(), open: {}, lastProg: null, els: {}, api: null, el: el};
+
+  function buildCode(P) {
+    var h = '', num = 0;
+    M.els = {};
+    P.blocks.forEach(function (b) {
+      var folded = b.fold && !M.open[b.id];
+      if (folded) {
+        var cnt = b.to - b.from + 1, n1 = num + 1; num += cnt;
+        h += '<div class="cl fold" data-fold="' + b.id + '" data-li="' + b.from + '"><span class="gn">' + (cnt > 1 ? n1 + '–' + num : n1) + '</span>' +
+          '<span class="tx"><b>▸</b> ' + esc(b.fold) + '</span><span></span><span class="pp"></span><span></span></div>';
+        return;
+      }
+      if (b.fold) h += '<div class="fh" data-fold="' + b.id + '">▾ ' + esc(b.fold) + '</div>';
+      for (var li = b.from; li <= b.to; li++) {
+        var L = P.lines[li];
+        h += '<div class="cl' + (L.struck ? ' struck' : '') + '" data-li="' + li + '"><span class="gn">' + (L.struck ? '' : ++num) + '</span>' +
+          '<span class="tx">' + (hl(L.t) || ' ') + '</span>' + (L.tag ? '<span class="tg ' + L.tag + '">' + L.tag + '</span>' : '<span></span>') +
+          '<span class="pp"></span><span></span></div>';
+      }
+    });
+    pre.innerHTML = h;
+    $$('.cl', pre).forEach(function (e) {
+      var li = +e.getAttribute('data-li');
+      if (e.classList.contains('fold')) {
+        var b = P.blocks.filter(function (x) { return x.from === li; })[0];
+        for (var t = b.from; t <= b.to; t++) M.els[t] = e;
+      } else M.els[li] = e;
+    });
+    M.lastProg = P;
+  }
+  function paintCode(st, i) {
+    if (!st.prog) return;
+    if (st.prog !== M.lastProg) buildCode(st.prog);
+    COPYTXT[sel] = st.prog.text();
+    $$('.cl', pre).forEach(function (e) { e.classList.remove('cur', 'simtrue', 'simfalse'); $('.pp', e).textContent = ''; });
+    var visits = new Map();
+    for (var k = 0; k <= i; k++) {
+      var s = M.steps[k];
+      if (s.prog !== st.prog || s.l === null) continue;
+      var e = M.els[s.l]; if (e) visits.set(e, (visits.get(e) || 0) + 1);
+    }
+    visits.forEach(function (c, e) { if (c >= 2) $('.pp', e).textContent = '•'.repeat(Math.min(c, 8)) + (c > 8 ? '+' : ''); });
+    var cur = M.els[st.l];
+    if (cur) {
+      cur.classList.add('cur');
+      if (st.cond) cur.classList.add(st.cond.ok ? 'simtrue' : 'simfalse');
+      if (M.api) M.api.reveal(cur, pre);
+    }
+  }
+  function paintChecks(v) {
+    var n = v.a.length, h = '', half = Math.floor(n / 2);
+    for (var k = 0; k < half; k++) {
+      var on = k < v.list.length, p = n - 1 - k;
+      h += '<div class="' + (on ? '' : 'hid') + (v.cur && v.cur[0] === k ? ' cur' : '') + '">a[' + k + '] == a[' + p + '] ?' +
+        ' <span class="v">' + v.a[k] + ' and ' + v.a[p] + '</span></div>';
+    }
+    var done = v.list.length === half && !v.cur && M.api && M.api.index() === M.steps.length - 1;
+    h += '<div class="stop' + (done ? '' : ' hid') + '">stop' + (n % 2 ? ': a[' + ((n - 1) / 2) + '] has no partner' : '') + '</div>';
+    chk.innerHTML = h;
+  }
+  function render(st, i, api) {
+    M.api = api;
+    fig.innerHTML = cfg.draw(st.view, st);
+    if (cfg.checks) paintChecks(st.view); else paintCode(st, i);
+    var x = '';
+    if (cfg.console) x += '<div class="cons"><div class="ch">Output</div><pre>' + esc(st.out || '') + '</pre></div>';
+    if (cfg.extra) x += cfg.extra(st, i, M);
+    xtra.innerHTML = x;
+    xtra.style.display = x ? '' : 'none';
+    api.watch(st.watch || []);
+    api.msg(fmt(st.say));
+  }
+  M.api = Sim.make({el: el, steps: M.steps, render: render, play: cfg.play || 900,
+    group: function (s) { return s.grp || ''; }, name: cfg.name});
+  if (pre) {
+    pre.addEventListener('click', function (e) {
+      var f = e.target.closest('[data-fold]');
+      if (f) { var id = f.getAttribute('data-fold'); M.open[id] = !M.open[id]; M.lastProg = null; reserve(); M.api.go(M.api.index()); return; }
+      var c = e.target.closest('.cl'); if (!c) return;
+      var i = M.api.index(), st = M.steps[i], n = M.steps.length;
+      for (var t = 1; t <= n; t++) {
+        var k = (i + t) % n, s = M.steps[k];
+        if (s.prog === st.prog && s.l !== null && M.els[s.l] === c) { M.api.go(k); return; }
+      }
+    });
+    $('.cpy', el).addEventListener('click', function () {
+      var b = this, t = COPYTXT[sel] || '';
+      var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1200); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, function () { fallback(t); done(); });
+      else { fallback(t); done(); }
+    });
+  }
+  /* the listing grows while lines are written by hand: reserve its tallest shape from step 1,
+     so the buttons under it never move */
+  function reserve() {
+    if (!pre) return;
+    var rows = 0, seen = [];
+    M.steps.forEach(function (s) {
+      if (!s.prog || seen.indexOf(s.prog) >= 0) return;
+      seen.push(s.prog);
+      var r = 0;
+      s.prog.blocks.forEach(function (b) { r += b.fold ? (M.open[b.id] ? b.to - b.from + 2 : 1) : b.to - b.from + 1; });
+      rows = Math.max(rows, r);
+    });
+    pre.style.minHeight = 'min(calc(' + rows + ' * 1.72em + 1.2rem), 64vh, 560px)';
+  }
+  reserve();
+  M.reload = function () { M.steps = cfg.build(); M.lastProg = null; reserve(); M.api.setSteps(M.steps); };
+  return M;
+}
+function fallback(t) {
+  var ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta);
+}
+
+/* ---------- inputs ---------- */
+var IN = {pal: [1, 2, 3, 3, 2, 1], sort: [29, 5, 14, 37, 13, 8, 21], A: [1, 2, 2, 3], B: [3, 4, 1, 1, 1]};
+function readInputs(which) {
+  if (which === 'pal') {
+    var p = LOGIC.parseList($('#in-pal').value, 1, 10);
+    $('#err-pal').textContent = p.err || ''; if (p.err) return false; IN.pal = p.v; return true;
+  }
+  if (which === 'sort') {
+    var s = LOGIC.parseList($('#in-sort').value, 5, 10);
+    $('#err-sort').textContent = s.err || ''; if (s.err) return false; IN.sort = s.v; return true;
+  }
+  var a = LOGIC.parseList($('#in-a').value, 1, 6, 'a'), b = a.err ? a : LOGIC.parseList($('#in-b').value, 1, 6, 'b');
+  $('#err-ab').textContent = a.err || b.err || ''; if (a.err || b.err) return false; IN.A = a.v; IN.B = b.v; return true;
+}
+
+/* ---------- static parts ---------- */
+function exRow(vals, tail) { return '<div class="exrow">' + vals.map(function (x) { return '<span class="exb">' + x + '</span>'; }).join('') + (tail || '') + '</div>'; }
+function exPal() {
+  var rows = [[1, 2, 3, 2, 1], [4, 4], [1, 2, 3, 1], [7]];
+  $('#ex-pal').innerHTML = rows.map(function (r) { var y = LOGIC.palRight(r); return exRow(r, '<span class="exv ' + (y === 'Yes' ? 'yes' : 'no') + '">' + y + '</span>'); }).join('');
+}
+function exSort() {
+  var rows = [IN.sort, [3, 1, 2]];
+  $('#ex-sort').innerHTML = rows.map(function (r) {
+    return exRow(r, '<span class="exarrow">→</span>' + r.slice().sort(function (x, y) { return x - y; }).map(function (x) { return '<span class="exb alt">' + x + '</span>'; }).join(''));
+  }).join('');
+}
+function exCopy() {
+  var A = IN.A, B = IN.B, c = LOGIC.revJoin(A, B), d = c.filter(function (x, k) { return k === 0 || x !== c[k - 1]; });
+  var lab = function (t) { return '<span class="exl">' + t + '</span>'; };
+  $('#ex-copy').innerHTML =
+    '<div class="exrow">' + lab('a') + A.map(function (x) { return '<span class="exb">' + x + '</span>'; }).join('') +
+      '<span class="exarrow"> </span>' + lab('b') + B.map(function (x) { return '<span class="exb alt">' + x + '</span>'; }).join('') + '</div>' +
+    '<div class="exrow">' + lab('c') + c.map(function (x, k) { return '<span class="exb' + (k >= A.length ? ' alt' : '') + '">' + x + '</span>'; }).join('') + '</div>' +
+    '<div class="exrow">' + lab('d') + d.map(function (x) { return '<span class="exb" style="border-color:#34d399;background:#ecfdf5;color:#047857">' + x + '</span>'; }).join('') + '</div>';
+}
+var SNIP = {
+  one: 'for (i = 0; i < n / 2; i++) {\n    // check a[i] and a[n - 1 - i]\n}',
+  two: 'for (i = 0, j = n - 1; i < j; i++, j--) {\n    // check a[i] and a[j]\n}',
+  prime: 'f = 1;               // no divisor yet\nfor (i = 2; i < n; i++) {\n    if (n % i == 0) {\n        f = 0;       // found one\n        break;\n    }\n}\n// (n is 2 or more here)',
+  palcore: 'f = 1;               // no mismatch yet\nfor (i = 0, j = n - 1; i < j; i++, j--) {\n    if (a[i] != a[j]) {\n        f = 0;       // found one\n        break;\n    }\n}'
+};
+$$('pre[data-code]').forEach(function (p) { p.innerHTML = staticCode(SNIP[p.getAttribute('data-code')]); });
+$$('.turn .tbtn').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var a = b.parentNode.querySelector('.ta'), on = a.classList.toggle('on');
+    b.textContent = on ? 'Hide the answer' : 'Show the answer';
+  });
+});
+
+/* ---------- tab 1 ---------- */
+var S = {};
+S.pairs = mount('#sim-pairs', {name: 'Write the checks', plate: 'a[ ]', checks: true, build: function () { return LOGIC.palPairs(IN.pal); }, draw: drawPal});
+S.walk = mount('#sim-walk', {name: 'i and j walk towards each other', plate: 'a[ ]', build: function () { return LOGIC.palWalk(IN.pal); }, draw: drawPal,
+  extra: function (st) {
+    var v = st.view, half = Math.floor(v.a.length / 2), h = '<table class="tbl"><tr><th>pass</th><th>pair looked at</th></tr>';
+    for (var k = 0; k < half; k++) {
+      var on = k < v.seen.length;
+      h += '<tr><td>' + (k + 1) + '</td><td class="mono' + (on ? '' : ' hid') + '">a[' + k + '] and a[' + (v.a.length - 1 - k) + ']</td></tr>';
+    }
+    return half ? h + '</table>' : '';
+  }});
+var faultyIn = [1, 2, 3, 2, 1];
+S.faulty = mount('#sim-faulty', {name: 'Find a counter-example', plate: 'a[ ]', console: true,
+  top: '<div class="tbar"><label for="in-faulty">Your array:</label><input id="in-faulty" value="1 2 3 2 1" autocomplete="off" spellcheck="false">' +
+       '<button class="btn sm" type="button" id="run-faulty">Load it</button><p class="err" id="err-faulty"></p></div>',
+  build: function () { return LOGIC.palFaulty(faultyIn); }, draw: drawPal,
+  extra: function (st, i, M) {
+    var last = i === M.steps.length - 1, vd = M.steps[M.steps.length - 1].view.verdict;
+    var cls = !last ? 'hid' : (vd.got === vd.right ? 'same' : 'diff');
+    return '<div class="verdict ' + cls + '"><div><div class="vl">This code prints</div><div class="vv">' + vd.got + '</div></div>' +
+      '<div><div class="vl">The right answer</div><div class="vv">' + vd.right + '</div></div></div>' +
+      '<p class="found">' + (last && vd.got !== vd.right ? 'You found a counter-example!' : '') + '</p>';
+  }});
+S.real = mount('#sim-real', {name: 'Look for one mismatch', plate: 'a[ ]', console: true, build: function () { return LOGIC.palReal(IN.pal); }, draw: drawPal});
+function loadFaulty() {
+  var p = LOGIC.parseList($('#in-faulty').value, 1, 10);
+  $('#err-faulty').textContent = p.err || '';
+  if (p.err) return;
+  faultyIn = p.v; S.faulty.reload();
+}
+$('#run-faulty').addEventListener('click', loadFaulty);
+$('#in-faulty').addEventListener('keydown', function (e) { if (e.key === 'Enter') loadFaulty(); });
+
+/* ---------- tab 2 ---------- */
+var tried = {}, start = 3;
+S.s2 = mount('#sim-s2', {name: 'The smallest goes to box 0', console: true, build: function () { return LOGIC.sortRound(IN.sort, 0, 'lit0'); },
+  draw: function (v) { return drawSort(v, false); }});
+S.s3 = mount('#sim-s3', {name: 'The part from index 3', console: true, build: function () { return LOGIC.sortRound(IN.sort, 3, 'lit3'); },
+  draw: function (v) { return drawSort(v, false); }});
+function startButtons() {
+  var h = '<div class="starts"><span>The part starts at:</span>';
+  for (var s = 0; s <= IN.sort.length - 2; s++) h += '<button class="btn ghost sm' + (s === start ? ' on' : '') + '" type="button" data-start="' + s + '">' + s + '</button>';
+  return h + '</div>';
+}
+S.s4 = mount('#sim-s4', {name: 'One round, with i', console: true, top: '<div class="tbar" id="s4-top"></div>',
+  build: function () { tried[start] = true; return LOGIC.sortRound(IN.sort, start, 'var'); },
+  draw: function (v) { return drawSort(v, true); },
+  extra: function () {
+    var h = '<div class="tblw"><table class="tbl"><tr><th>start</th><th>minIdx starts at</th><th>j starts at</th><th>swap with</th></tr>';
+    for (var s = 0; s <= IN.sort.length - 2; s++) {
+      var on = !!tried[s], c = on ? '' : ' class="hid"';
+      h += '<tr' + (s === start ? ' class="now"' : '') + '><td>' + s + '</td><td class="mono"><span' + c + '>minIdx = <span class="chg">' + s + '</span></span></td>' +
+        '<td class="mono"><span' + c + '>j = <span class="chg">' + (s + 1) + '</span></span></td><td class="mono"><span' + c + '>a[<span class="chg">' + s + '</span>]</span></td></tr>';
+    }
+    return h + '</table></div>';
+  }});
+function paintStarts() { $('#s4-top').innerHTML = startButtons(); }
+$('#s4-top').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-start]'); if (!b) return;
+  start = +b.getAttribute('data-start'); paintStarts(); S.s4.reload();
+});
+paintStarts();
+S.s5 = mount('#sim-s5', {name: 'Selection sort', console: true, build: function () { return LOGIC.sortFull(IN.sort); },
+  draw: function (v) { return drawSort(v, true); },
+  extra: function (st) {
+    var v = st.view, n = v.arr.length, h = '<div class="tblw"><table class="tbl"><tr><th>round</th><th>array after the round</th><th>swap</th></tr>';
+    for (var r = 0; r < n - 1; r++) {
+      var p = v.passes[r];
+      h += p ? '<tr><td>' + p.r + '</td><td class="mono">' + p.arr.map(function (x, k) { return k <= r ? '<b>' + x + '</b>' : x; }).join(' ') + '</td><td>' +
+        (p.sw[0] === p.sw[1] ? 'none' : 'a[' + p.sw[0] + '] and a[' + p.sw[1] + ']') + '</td></tr>'
+             : '<tr><td>' + (r + 1) + '</td><td class="mono hid">' + v.arr.join(' ') + '</td><td class="hid">a[0] and a[0]</td></tr>';
+    }
+    return h + '</table></div>';
+  }});
+
+/* ---------- tab 3 ---------- */
+S.c2 = mount('#sim-c2', {name: 'Copy a into c', plate: 'a, b and c', build: function () { return LOGIC.copyA(IN.A, IN.B).steps; }, draw: drawCopy});
+S.c3 = mount('#sim-c3', {name: 'Copy b after a', plate: 'a, b and c', build: function () { return LOGIC.copyB(IN.A, IN.B).steps; }, draw: drawCopy});
+S.c4 = mount('#sim-c4', {name: 'Copy both, backwards', plate: 'a, b and c', build: function () { return LOGIC.copyRev(IN.A, IN.B).steps; }, draw: drawCopy});
+S.c5 = mount('#sim-c5', {name: 'Keep one, skip the same', plate: 'c and d', console: true, build: function () { return LOGIC.removeAhead(IN.A, IN.B); },
+  draw: function (v) { return drawRemove(v, false); }});
+S.c6 = mount('#sim-c6', {name: 'Another way: look back', plate: 'c and d', console: true, build: function () { return LOGIC.removeBack(IN.A, IN.B); },
+  draw: function (v) { return drawRemove(v, true); }});
+
+var GROUPS = {pal: ['pairs', 'walk', 'real'], sort: ['s2', 's3', 's4', 's5'], ab: ['c2', 'c3', 'c4', 'c5', 'c6']};
+function reloadGroup(g) {
+  if (!readInputs(g === 'ab' ? 'ab' : g)) return;
+  if (g === 'sort') { tried = {}; if (start > IN.sort.length - 2) start = IN.sort.length - 2; paintStarts(); exSort(); }
+  if (g === 'ab') exCopy();
+  GROUPS[g].forEach(function (k) { S[k].reload(); });
+}
+var deb = function (f) { var t; return function () { clearTimeout(t); t = setTimeout(f, 350); }; };
+$('#in-pal').addEventListener('input', deb(function () { reloadGroup('pal'); }));
+$('#in-sort').addEventListener('input', deb(function () { reloadGroup('sort'); }));
+$('#in-a').addEventListener('input', deb(function () { reloadGroup('ab'); }));
+$('#in-b').addEventListener('input', deb(function () { reloadGroup('ab'); }));
+$$('.pre[data-for]').forEach(function (b) {
+  b.addEventListener('click', function () { var t = $('#' + b.getAttribute('data-for')); t.value = b.getAttribute('data-v'); reloadGroup(t.id === 'in-pal' ? 'pal' : 'sort'); });
+});
+$$('.pre[data-ab]').forEach(function (b) {
+  b.addEventListener('click', function () { var p = b.getAttribute('data-ab').split('|'); $('#in-a').value = p[0]; $('#in-b').value = p[1]; reloadGroup('ab'); });
+});
+exPal(); exSort(); exCopy();
+
+/* ---------- tabs ---------- */
+function showTab(n) {
+  $$('.tab').forEach(function (t) { t.setAttribute('aria-selected', t.getAttribute('data-tab') === String(n) ? 'true' : 'false'); });
+  $$('.panel').forEach(function (p) { p.hidden = p.id !== 't' + n; });
+  Sim.all().forEach(function (a) { a.pause(); });
+  try { localStorage.setItem('arrays-1111-tab', n); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+$$('.tab').forEach(function (t) { t.addEventListener('click', function () { showTab(t.getAttribute('data-tab')); }); });
+document.addEventListener('keydown', function (e) {
+  var t = document.activeElement;
+  if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === '1' || e.key === '2' || e.key === '3') showTab(e.key);
+});
+try { var saved = localStorage.getItem('arrays-1111-tab'); if (saved) showTab(saved); } catch (e) {}
+window.__S = S;
+})();
+</script>
+</body>
+</html>
