@@ -1,0 +1,2522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2D Arrays</title>
+<style>
+/* ---- the simulator shell, copied from the CSE-2321 course site (assets/sim.css) ---- */
+/* ==========================================================================
+   CSE-2321 · the simulator shell
+   --------------------------------------------------------------------------
+   One frame for every simulator on the site. A page supplies the picture;
+   this file supplies the frame around it, so a student who learns to drive
+   the array simulator in Week 3 can drive the AVL simulator in Week 13.
+
+   Layout follows the "deck": the drawing gets the full width on top, and the
+   instruments (code, watches, narration, controls) sit in a row beneath it.
+   Focus — which only ever runs on a projector — switches to the "bench":
+   one dark surface, larger type, no card seams.
+
+   Every class here is either .sim-scoped or carries a name that no lesson
+   page already uses. Checked against all 21 pages before naming.
+   ========================================================================== */
+
+/* ---------- the frame ---------- */
+.sim{border:1px solid #e8ebfa;border-radius:1rem;background:#fff;margin:1.3rem 0;
+     box-shadow:0 14px 32px -26px rgba(30,27,75,.45),inset 0 1px 0 #fff;overflow:hidden}
+.sim .simhd{display:flex;align-items:center;gap:.7rem;padding:.55rem .85rem;border-bottom:1px solid #eef0f8}
+.sim .simttl{font-size:.5rem;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:#b4bcd8}
+.sim .simnm{font-size:.78rem;font-weight:700;color:#4c5480}
+.sim .focusb{margin-left:auto;appearance:none;font-family:inherit;font-size:.68rem;font-weight:800;
+     color:#7b8199;background:#fff;border:1px solid #e2e6f5;border-radius:.42rem;padding:.28rem .6rem;
+     cursor:pointer;transition:.15s;white-space:nowrap}
+.sim .focusb:hover{border-color:#a5b4fc;color:#4f46e5}
+.sim .simbd{padding:.9rem;display:flex;flex-direction:column;gap:.75rem}
+/* ---------- nothing that changes size may sit above the buttons ----------
+   The watch strip wraps and the narration grows from one line to three, so a
+   control row placed after them walks away from the cursor that is pressing
+   it. The rail and the picture are fixed; the controls follow them, and the
+   two things that breathe go underneath. Markup order stays readable. */
+.sim .simctl{order:1}
+.sim .simwatch{order:2}
+.sim .simmsg{order:3}
+/* and none of them may be squeezed: a flex child that shrinks below its content
+   inside a .sim — which clips its own overflow — is content nobody can reach */
+.sim .simbd > *{flex-shrink:0}
+
+/* ---------- the block the keyboard is pointing at ----------
+   Quiet on purpose: it answers "will n drive this one?" at a glance without
+   competing with anything inside the frame. Never shown while Focus is open,
+   because then there is only one thing on the screen anyway. */
+.sim.simon{border-color:#c7d2fe;box-shadow:0 0 0 2px rgba(79,70,229,.16),
+     0 14px 32px -26px rgba(30,27,75,.45),inset 0 1px 0 #fff}
+body.fsopen .sim.simon{box-shadow:none}
+.fsbody .sim.simon{border:0;box-shadow:none}
+
+/* ---------- the step rail: every step a segment, grouped by loop pass ---------- */
+.simrail{display:flex;gap:2px;align-items:stretch;margin:0;border-radius:.35rem;
+     overflow:hidden;background:#eef2ff;padding:2px}
+.simrail .grp{display:flex;gap:2px;flex:var(--f,1);position:relative;padding-top:13px;min-width:0}
+.simrail .grp::before{content:attr(data-l);position:absolute;top:0;left:0;right:0;text-align:center;
+     font-size:.5rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#a5b4fc;
+     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.simrail .sg{flex:1;min-width:3px;height:9px;border-radius:2px;background:#dbe1ff;cursor:pointer;
+     transition:.18s;border:0;padding:0;appearance:none}
+.simrail .sg:hover{background:#c3ccff}
+.simrail .sg:focus-visible{outline:2px solid #4f46e5;outline-offset:1px}
+.simrail .sg.done{background:#818cf8}
+.simrail .sg.tr{background:#059669}
+.simrail .sg.fl{background:#e11d48}
+.simrail .sg.now{background:#4f46e5;box-shadow:0 0 0 2px rgba(79,70,229,.25)}
+
+/* ---------- the stage ---------- */
+.simboard{position:relative;border:1px solid #e8ebfa;border-radius:.6rem;overflow:auto;
+     background:linear-gradient(180deg,#fff 0%,#fcfdff 55%,#f7f9ff 100%);
+     display:grid;place-items:center;padding:1.15rem .8rem;min-height:150px}
+.simboard > .plate{position:absolute;left:.75rem;top:.5rem;font-size:.5rem;font-weight:800;
+     letter-spacing:.22em;text-transform:uppercase;color:#b4bcd8;pointer-events:none}
+.simboard > .simfig{max-width:100%}
+
+/* ---------- the instrument row under the stage ---------- */
+.simrow{display:grid;gap:.8rem;margin:0;align-items:stretch}
+@media(min-width:900px){
+  .simrow.two{grid-template-columns:1fr 1fr}
+  .simrow.three{grid-template-columns:1.3fr .85fr 1fr}
+}
+.simcol{display:flex;flex-direction:column;gap:.5rem;min-width:0}
+.simcol > .cttl{font-size:.5rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#b4bcd8}
+
+/* ---------- watches: nothing changes without a signal ---------- */
+.simwatch{display:flex;gap:.4rem;flex-wrap:wrap;align-content:flex-start}
+.wch{display:flex;align-items:stretch;border:1px solid #e2e8f0;border-radius:.4rem;overflow:hidden;
+     background:#fff;font-family:var(--mono,ui-monospace,monospace);font-size:.72rem}
+.wch .wn{padding:.22rem .45rem;background:#f8fafc;color:#64748b;font-weight:700;border-right:1px solid #e2e8f0}
+.wch .wv{padding:.22rem .5rem;font-weight:800;color:#1e1b4b;min-width:32px;text-align:center;
+     font-variant-numeric:tabular-nums}
+.wch.chg{border-color:#fcd34d;box-shadow:0 0 0 3px rgba(252,211,77,.28)}
+.wch.chg .wv{background:#fffbeb;color:#b45309}
+.wch.gone .wv{color:#cbd5e1;text-decoration:line-through;text-decoration-color:#fb7185}
+
+/* ---------- narration ---------- */
+.simmsg{display:flex;align-items:flex-start;gap:.7rem;border:1px solid #e8ebfa;border-radius:.5rem;
+     background:#fbfcff;padding:.62rem .8rem;min-height:58px}
+.simmsg .smn{font-family:var(--mono,ui-monospace,monospace);font-size:.66rem;font-weight:800;color:#fff;
+     background:#4f46e5;border-radius:.3rem;padding:.18rem .42rem;flex:0 0 auto;margin-top:.1rem}
+/* ---------- the verdict chip: what the condition on this step came to -----
+   A step carrying `cond` lands on the line that tests something, and the
+   answer is printed here rather than left inside a sentence. The rail segment
+   takes the same two colours, so a finished run reads as a column of greens
+   and reds you can point at.                                              */
+.simmsg .smv{display:none;font-family:var(--mono,ui-monospace,monospace);font-size:.6rem;font-weight:800;
+     letter-spacing:.1em;border-radius:.3rem;padding:.17rem .4rem;flex:0 0 auto;margin-top:.1rem}
+.simmsg .smv.on{display:inline-flex}
+.simmsg .smv.tr{background:#ecfdf5;color:#047857;border:1px solid #6ee7b7}
+.simmsg .smv.fl{background:#fff1f2;color:#be123c;border:1px solid #fda4af}
+.simmsg p{margin:0;font-size:.86rem;line-height:1.55;color:#475569}
+.simmsg p b{color:#1e293b}
+
+/* ---------- controls ---------- */
+.simctl{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;margin:0}
+.simcnt{margin-left:auto;font-family:var(--mono,ui-monospace,monospace);font-size:.72rem;font-weight:800;
+     color:#64748b;font-variant-numeric:tabular-nums}
+.simmeter{display:inline-flex;align-items:center;gap:.45rem;font-size:.68rem;font-weight:800;color:#b45309;
+     background:#fffbeb;border:1px solid #fcd34d;border-radius:.4rem;padding:.2rem .55rem}
+.simmeter b{font-family:var(--mono,ui-monospace,monospace);font-size:.85rem;font-variant-numeric:tabular-nums}
+.simkeys{font-size:.62rem;font-weight:700;color:#b4bcd8;letter-spacing:.04em}
+.simkeys kbd{font-family:var(--mono,ui-monospace,monospace);font-size:.62rem;font-weight:800;color:#7b8199;
+     background:#f4f6fd;border:1px solid #e2e6f5;border-radius:.25rem;padding:0 .25rem}
+
+/* ---------- the cell strip: indexed boxes in a row ---------- */
+.cstrip{display:flex;gap:.3rem;align-items:flex-end;justify-content:center;flex-wrap:nowrap}
+.ccel{width:var(--cw,58px);text-align:center;min-width:0}
+.ccel .cix{font-family:var(--mono,ui-monospace,monospace);font-size:calc(var(--cw,58px)*.132);
+     font-weight:700;color:#94a3b8;margin-bottom:.2rem}
+.ccel .cbx{height:var(--cw,58px);display:grid;place-items:center;border:1px solid #a5b4fc;border-radius:.4rem;
+     background:#fff;font-family:var(--mono,ui-monospace,monospace);font-size:calc(var(--cw,58px)*.32);
+     font-weight:800;color:#1e1b4b;transition:.28s}
+.ccel .cad{font-family:var(--mono,ui-monospace,monospace);font-size:calc(var(--cw,58px)*.118);
+     color:#a5b4fc;margin-top:.18rem}
+.ccel.look .cbx{border-color:#fcd34d;background:#fffbeb;color:#b45309;transform:translateY(-3px)}
+.ccel.hit  .cbx{border-color:#6ee7b7;background:#ecfdf5;color:#047857;box-shadow:0 0 0 3px rgba(110,231,183,.3)}
+.ccel.miss .cbx{color:#cbd5e1;border-color:#e2e8f0}
+.ccel.gone .cbx{opacity:.28}
+.clane{display:flex;gap:.3rem;justify-content:center;margin-top:.5rem}
+.clane .cpin{width:var(--cw,58px);display:grid;place-items:center;height:28px;min-width:0;
+     border:0;background:none;padding:0;margin:0}
+.cpin .ctag{display:inline-flex;align-items:center;gap:.3rem;border:1px solid #fcd34d;background:#fffbeb;
+     border-radius:.35rem;padding:.16rem .4rem;font-family:var(--mono,ui-monospace,monospace);
+     font-size:.62rem;font-weight:800;color:#b45309}
+
+/* ==========================================================================
+   FOCUS — the bench
+   Focus only ever runs on a projector, so it goes to one surface with bigger
+   type: no card seams, and the eye stops jumping between a white drawing and
+   a black listing. It comes in two skins. The dark bench is the default and
+   gives the highest contrast in a lit room; some projectors cannot draw a
+   convincing black, so the ☀ button switches the whole overlay to light and
+   the choice is remembered. Everything that changes SIZE is written once and
+   applies to both; only colour is skinned.
+   ========================================================================== */
+body.fsopen{overflow:hidden}
+.fsov{position:fixed;inset:0;z-index:120;background:#0f172a;display:none;flex-direction:column;
+     padding:.6rem .8rem 1rem}
+.fsov.on{display:flex}
+.fsov .fsbar{display:flex;align-items:center;gap:.4rem;padding:.2rem .1rem .55rem;flex:0 0 auto}
+.fsov .fsnm{font-family:var(--mono,ui-monospace,monospace);font-size:.7rem;font-weight:700;
+     letter-spacing:.16em;text-transform:uppercase;color:#4c5680;margin-right:auto;
+     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fsov .fslt,.fsov .fsx{appearance:none;font-family:inherit;font-size:.78rem;font-weight:800;
+     color:#c3cbe4;background:#1b2238;border:1px solid #2b3554;border-radius:.45rem;
+     padding:.4rem .8rem;cursor:pointer;flex:0 0 auto}
+.fsov .fslt{padding:.4rem .6rem}
+.fsov .fslt:hover,.fsov .fsx:hover{border-color:#8b85f5;color:#fff}
+.fsbody{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:auto}
+/* flex:1 0 auto, not 1 1 auto. The simulator may GROW to fill the overlay, but
+   it must never SHRINK below the size its content needs: .sim clips its own
+   overflow for the rounded corners, so a shrunk one hides the controls and the
+   narration with no way to reach them. At 200% browser zoom that was the whole
+   bottom half of every simulator. Kept at content height, .fsbody scrolls. */
+.fsbody .sim{margin:0;border:0;border-radius:.6rem;box-shadow:none;
+     flex:1 0 auto;display:flex;flex-direction:column;min-height:0}
+.fsbody .simhd{display:none}
+/* `safe center` and not plain `center`: a widget shorter than the bench is
+   centred on it, but one TALLER than the bench falls back to flex-start so
+   its top cannot escape above the scrollable area. Plain centring loses the
+   first rows of a zoomed-in simulator with no way to scroll back to them. */
+.fsbody .simbd{flex:1 0 auto;display:flex;flex-direction:column;min-height:0;padding:.7rem;
+     justify-content:safe center}
+.fsbody .simboard{flex:1 0 auto;min-height:0}
+.fsbody .simrow{flex:0 0 auto}
+
+/* ---- size: both skins. The old Focus shrank the drawing and left the type
+        alone, which is the wrong way round for a room. ---- */
+.fsbody{--cw:112px}
+.fsbody .simmsg{min-height:64px;padding:.7rem .9rem}
+.fsbody .simmsg p{font-size:1.06rem}
+.fsbody .simmsg .smn{font-size:.82rem}
+.fsbody .simmsg .smv{font-size:.74rem;padding:.2rem .5rem}
+.fsbody .wch{font-size:.95rem}
+.fsbody .simcol > .cttl{font-size:.58rem}
+.fsbody .simcnt{font-size:.9rem}
+.fsbody .simboard > .plate{font-size:.62rem}
+.fsbody .simrail .grp::before{font-size:.58rem}
+.fsbody .simrail .sg{height:12px}
+.fsbody .cpin .ctag{font-size:.8rem}
+.fsbody .simmeter{font-size:.82rem}
+.fsbody .simmeter b{font-size:1rem}
+/* the controls sit under the middle of the drawing, not off to one side */
+.fsbody .simctl{justify-content:center}
+.fsbody .simcnt{margin-left:0}
+
+/* ---- colour: the dark bench ---- */
+.fsov:not(.lit) .fsbody .sim{background:#131a2e}
+.fsov:not(.lit) .fsbody .simboard{background:#151c30;border-color:#232b45}
+.fsov:not(.lit) .fsbody .simboard > .plate{color:#4c5680}
+.fsov:not(.lit) .fsbody .simmsg{background:#141a2e;border-color:#232b45}
+.fsov:not(.lit) .fsbody .simmsg p{color:#c3cbe4}
+.fsov:not(.lit) .fsbody .simmsg p b{color:#fff}
+.fsov:not(.lit) .fsbody .simmsg .smv.tr{background:#0d2b24;color:#6ee7b7;border-color:#0f8a67}
+.fsov:not(.lit) .fsbody .simmsg .smv.fl{background:#3b0d1c;color:#fda4af;border-color:#c2295a}
+.fsov:not(.lit) .fsbody .wch{background:#1b2238;border-color:#2b3554}
+.fsov:not(.lit) .fsbody .wch .wn{background:#151c30;color:#6b769c;border-right-color:#2b3554}
+.fsov:not(.lit) .fsbody .wch .wv{color:#e6e9f7}
+/* the "this just changed" flash was written for white paper: pale yellow
+   behind brown text is almost invisible projected onto the dark bench */
+.fsov:not(.lit) .fsbody .wch.chg{border-color:#b45309;box-shadow:0 0 0 3px rgba(180,83,9,.35)}
+.fsov:not(.lit) .fsbody .wch.chg .wv{background:#3a2a10;color:#fcd34d}
+.fsov:not(.lit) .fsbody .wch.gone .wv{color:#4c5680}
+.fsov:not(.lit) .fsbody .simcol > .cttl{color:#4c5680}
+.fsov:not(.lit) .fsbody .simcnt{color:#6b769c}
+.fsov:not(.lit) .fsbody .simkeys{color:#4c5680}
+.fsov:not(.lit) .fsbody .simkeys kbd{background:#1b2238;border-color:#2b3554;color:#8f9ac2}
+.fsov:not(.lit) .fsbody .simrail{background:#1b2238}
+.fsov:not(.lit) .fsbody .simrail .grp::before{color:#4c5680}
+.fsov:not(.lit) .fsbody .simrail .sg{background:#2b3554}
+.fsov:not(.lit) .fsbody .simrail .sg:hover{background:#3d4a75}
+.fsov:not(.lit) .fsbody .simrail .sg.done{background:#6f79d8}
+.fsov:not(.lit) .fsbody .simrail .sg.tr{background:#0f8a67}
+.fsov:not(.lit) .fsbody .simrail .sg.fl{background:#c2295a}
+.fsov:not(.lit) .fsbody .simrail .sg.now{background:#8b85f5;box-shadow:0 0 0 2px rgba(139,133,245,.3)}
+.fsov:not(.lit) .fsbody .ccel .cbx{background:#1b2238;border-color:#3d4670;color:#e6e9f7}
+.fsov:not(.lit) .fsbody .ccel .cix{color:#5b678f}
+.fsov:not(.lit) .fsbody .ccel .cad{color:#4c5680}
+.fsov:not(.lit) .fsbody .ccel.look .cbx{background:#3a2a10;border-color:#b45309;color:#fcd34d}
+.fsov:not(.lit) .fsbody .ccel.hit  .cbx{background:#0d2b24;border-color:#059669;color:#6ee7b7}
+.fsov:not(.lit) .fsbody .ccel.miss .cbx{color:#4c5680;border-color:#2b3554}
+.fsov:not(.lit) .fsbody .cpin .ctag{background:#3a2a10;border-color:#b45309;color:#fcd34d}
+.fsov:not(.lit) .fsbody .simmeter{background:#3a2a10;border-color:#b45309;color:#fcd34d}
+.fsov:not(.lit) .fsbody .box,.fsov:not(.lit) .fsbody .subtle{color:#c3cbe4}
+/* every lesson page carries a site-wide `.btn.ghost{...!important}` next to the
+   drawer styles, so the bench has to answer in kind. Dark skin only — on the
+   light bench the page's own button is exactly right. */
+.fsov:not(.lit) .fsbody .btn.ghost{background:#1b2238!important;color:#c3cbe4!important;
+     border-color:#2b3554!important}
+.fsov:not(.lit) .fsbody .btn.ghost:hover:not(:disabled){border-color:#8b85f5!important;color:#fff!important}
+/* the light-code theme is for reading at home; on the dark bench a white code
+   surface lands as a slab in the middle of the instrument */
+body.codelight .fsov:not(.lit) .fsbody pre.code,
+body.codelight .fsov:not(.lit) .fsbody .carr-code{background:#0f172a;color:#e2e8f0;border-color:#232b45}
+body.codelight .fsov:not(.lit) .fsbody pre.code .k,body.codelight .fsov:not(.lit) .fsbody .carr-code .k{color:#c4b5fd}
+body.codelight .fsov:not(.lit) .fsbody pre.code .t,body.codelight .fsov:not(.lit) .fsbody .carr-code .t{color:#7dd3fc}
+body.codelight .fsov:not(.lit) .fsbody pre.code .f,body.codelight .fsov:not(.lit) .fsbody .carr-code .f{color:#fca5a5}
+body.codelight .fsov:not(.lit) .fsbody pre.code .n,body.codelight .fsov:not(.lit) .fsbody .carr-code .n{color:#fcd34d}
+body.codelight .fsov:not(.lit) .fsbody pre.code .c,body.codelight .fsov:not(.lit) .fsbody .carr-code .c{color:#64748b}
+
+/* ---- colour: the light bench. Everything not named here simply keeps the
+        page's own styling, which is the point — it is the page, enlarged. ---- */
+.fsov.lit{background:#eef1f8}
+.fsov.lit .fsnm{color:#94a3b8}
+.fsov.lit .fslt,.fsov.lit .fsx{background:#fff;border-color:#dfe3f2;color:#475569}
+.fsov.lit .fslt:hover,.fsov.lit .fsx:hover{border-color:#4f46e5;color:#1e1b4b}
+.fsov.lit .fsbody .sim{background:#fff;box-shadow:0 14px 32px -26px rgba(30,27,75,.45)}
+.fsov.lit .fsbody .simboard > .plate{color:#7b8199}
+/* plates, captions and key hints are deliberately faint on the page. Projected,
+   a label nobody can read is a label that is not there — Focus lifts them all. */
+.fsov:not(.lit) .fsbody .simboard > .plate{color:#8f9ac2}
+.fsov.lit .fsbody .simkeys{color:#7b8199}
+.fsov.lit .fsbody .simkeys kbd{color:#475569;border-color:#cbd5e1}
+
+/* ---------- the first card in a column needs room for its badge ----------
+   The numbered badge hangs 1.15rem above the card it belongs to, so a card
+   sitting flush against whatever is above it has its number clipped or
+   crowded. Every page gets the same clearance. */
+#p-lesson > .card:first-of-type,
+#p-exam > .card:first-of-type,
+.panel > main.wrap > .card:first-of-type{margin-top:2.6rem}
+main.wrap > .card:first-of-type{margin-top:2.6rem}
+
+/* ---------- narrow screens ---------- */
+@media(max-width:899px){
+  .sim .simbd{padding:.75rem}
+  .simboard{padding:.9rem .6rem;min-height:130px}
+  .simrow{gap:.65rem;margin-top:.65rem}
+}
+@media(max-width:560px){
+  .sim .simhd{padding:.5rem .65rem}
+  .sim .simbd{padding:.6rem}
+  .simmsg{padding:.55rem .65rem;min-height:64px}
+  .simmsg p{font-size:.82rem}
+  .simctl{gap:.35rem}
+  .simcnt{margin-left:0;width:100%;text-align:right}
+  .simrail .grp::before{font-size:.44rem;letter-spacing:.02em}
+  .fsov{padding:.5rem .5rem .8rem}
+  .fsbody{--cw:62px}
+  .fsbody .simmsg p{font-size:.92rem}
+}
+
+
+/* ---- this page ---- */
+:root{
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --mono:'Fira Code',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --bg:#f1f5f9; --panel:#fff; --ink:#1e293b; --ink-soft:#475569; --ink-mute:#64748b;
+  --line:#e2e8f0; --line-strong:#cbd5e1; --accent:#4f46e5; --r:1rem;
+  --sh-sm:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.04);
+  --sh-md:0 4px 6px -1px rgba(15,23,42,.07),0 2px 4px -2px rgba(15,23,42,.05);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 1rem}
+@media(min-width:768px){.wrap{padding:0 1.75rem}}
+code,.mono{font-family:var(--mono)}
+p code,li code,.tq code,.ta code,.simmsg code,td code,.lede code{font-size:.88em;font-weight:600;background:#eef2ff;color:#3730a3;
+  border:1px solid #e0e7ff;border-radius:.3rem;padding:.02rem .32rem;white-space:nowrap}
+
+/* top bar and tabs */
+.topbar{position:sticky;top:0;z-index:60;background:rgba(15,23,42,.97);border-bottom:1px solid #334155;color:#e2e8f0}
+.topbar-in{max-width:1120px;margin:0 auto;padding:.6rem 1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+@media(min-width:768px){.topbar-in{padding:.65rem 1.75rem}}
+.brand{display:flex;align-items:center;gap:.6rem;min-width:0}
+.brand-badge{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:grid;place-items:center;
+  font-weight:900;font-size:.72rem;color:#fff;flex:0 0 auto}
+.brand-t{font-size:.8rem;font-weight:800}
+.brand-s{font-size:.64rem;color:#94a3b8;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.tabs{display:flex;gap:.3rem;margin-left:auto;overflow-x:auto;scrollbar-width:none;padding:2px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:1px solid transparent;background:transparent;color:#94a3b8;font-family:inherit;font-size:.8rem;font-weight:700;
+  padding:.42rem .85rem;border-radius:.5rem;cursor:pointer;white-space:nowrap}
+.tab:hover{color:#e2e8f0;background:#1e293b}
+.tab[aria-selected="true"]{background:#e2e8f0;color:#0f172a}
+button:focus-visible,input:focus-visible{outline:3px solid #818cf8;outline-offset:2px}
+
+.hero{background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 55%,#312e81 100%);color:#e2e8f0;padding:2rem 0 2.3rem}
+.eyebrow{font-size:.66rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#a5b4fc;margin-bottom:.5rem}
+.hero h1{font-size:clamp(1.6rem,5vw,2.5rem);font-weight:900;letter-spacing:-.02em;margin:0 0 .5rem;line-height:1.15}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{font-size:1rem;color:#cbd5e1;max-width:62ch;margin:0}
+.lede code{background:rgba(255,255,255,.1);color:#e0e7ff;border-color:rgba(255,255,255,.18)}
+
+main{padding:1.6rem 0 4rem}
+.panel[hidden]{display:none}
+.card{background:var(--panel);border-radius:var(--r);box-shadow:var(--sh-md);padding:1.4rem 1.1rem;margin-bottom:2.6rem;position:relative;
+  border-top:4px solid var(--accent)}
+@media(min-width:768px){.card{padding:1.8rem 2rem}}
+.card>.badge{position:absolute;top:-1.15rem;left:1.1rem;width:2.4rem;height:2.4rem;border-radius:50%;background:var(--accent);color:#fff;
+  display:grid;place-items:center;font-weight:900;font-size:1rem;border:4px solid var(--bg);z-index:2}
+@media(min-width:768px){.card>.badge{left:2rem}}
+.card.numbered{padding-top:2.2rem}
+.panel > .card:first-of-type,.panel > .inbar + .card{margin-top:2.4rem}
+.kicker{font-size:.66rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:.35rem}
+.card h2{font-size:clamp(1.2rem,3.4vw,1.55rem);font-weight:800;letter-spacing:-.015em;margin:0 0 .6rem;line-height:1.25}
+.card p{margin:0 0 .75rem}
+.card > p:last-child{margin-bottom:0}
+
+/* the input bar of a tab */
+.inbar{margin-top:1.1rem;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .7rem;background:#fff;border:1px solid var(--line);border-radius:.8rem;
+  padding:.7rem .9rem;box-shadow:var(--sh-sm)}
+.inbar label{font-size:.8rem;font-weight:800;color:var(--ink-soft)}
+.inbar input,.tbar input{font-family:var(--mono);font-size:.95rem;font-weight:700;color:#1e1b4b;border:2px solid var(--line-strong);
+  border-radius:.5rem;padding:.35rem .6rem;min-width:0;width:15rem;max-width:100%}
+.inbar input.sm{width:9rem}
+.inbar .pre{appearance:none;font-family:var(--mono);font-size:.74rem;font-weight:700;color:var(--ink-soft);background:#f8fafc;
+  border:1px solid var(--line);border-radius:.45rem;padding:.3rem .55rem;cursor:pointer}
+.inbar .pre:hover{border-color:#a5b4fc;color:#3730a3}
+.inbar .note{font-size:.78rem;color:var(--ink-mute);flex-basis:100%;margin:0}
+.inbar .err,.tbar .err{font-size:.82rem;font-weight:800;color:#be123c;flex-basis:100%;margin:0}
+.inbar .err:empty,.tbar .err:empty{display:none}
+
+/* buttons (as on the course site) */
+.btn{appearance:none;font-family:inherit;font-weight:800;font-size:.82rem;padding:.6rem 1.15rem;border-radius:.55rem;cursor:pointer;border:none;
+  background:var(--accent);color:#fff;box-shadow:var(--sh-sm);transition:filter .15s,transform .1s}
+.btn:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn.ghost{background:#fff;color:var(--ink-soft);border:2px solid var(--line);box-shadow:none}
+.btn.ghost:hover:not(:disabled){border-color:var(--line-strong);color:var(--ink)}
+.btn.sm{font-size:.74rem;padding:.42rem .8rem}
+
+/* example rows */
+.exs{display:grid;gap:.45rem;margin:.6rem 0 1rem}
+.exrow{display:flex;align-items:center;gap:.3rem;flex-wrap:wrap}
+.exb{display:inline-grid;place-items:center;width:2.1rem;height:2.1rem;border:1.5px solid #a5b4fc;border-radius:.4rem;background:#fff;
+  font-family:var(--mono);font-weight:800;color:#1e1b4b;font-size:.9rem}
+.exb.alt{border-color:#fb923c;background:#fff7ed;color:#9a3412}
+.exarrow{color:var(--ink-mute);font-weight:800;margin:0 .35rem}
+.exv{font-size:.78rem;font-weight:800;border-radius:.35rem;padding:.12rem .5rem;margin-left:.5rem}
+.exv.yes{background:#ecfdf5;color:#047857;border:1px solid #6ee7b7}
+.exv.no{background:#fff1f2;color:#be123c;border:1px solid #fda4af}
+.exl{font-family:var(--mono);font-size:.78rem;font-weight:800;color:var(--ink-mute);width:1.6rem}
+
+/* your turn (as on the course site) */
+.turn{border:1.5px solid #c4b5fd;border-radius:.9rem;margin:1.1rem 0;overflow:hidden;background:linear-gradient(180deg,#faf8ff,#f6f3ff)}
+.turn .th{display:flex;align-items:center;gap:.5rem;padding:.6rem .95rem;border-bottom:1.5px solid #ddd6fe;background:rgba(255,255,255,.6)}
+.turn .th b{font-size:.62rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#6d28d9}
+.turn .tq{padding:.8rem .95rem;font-size:.96rem;line-height:1.62}
+.turn .tq p{margin:0 0 .55rem}
+.turn .tq p:last-child{margin:0}
+.turn .hint{font-size:.84rem;color:#7c3aed;font-weight:700}
+.turn .tbtn{appearance:none;font-family:inherit;font-size:.78rem;font-weight:800;border:1.5px solid #a78bfa;background:#fff;color:#6d28d9;
+  border-radius:.5rem;padding:.42rem .85rem;cursor:pointer;margin:0 .95rem .9rem}
+.turn .tbtn:hover{background:#f5f3ff;border-color:#7c3aed}
+.turn .ta{display:none;padding:0 .95rem .95rem;font-size:.94rem;line-height:1.62}
+.turn .ta.on{display:block}
+.turn .ta p{margin:0 0 .5rem}
+.turn .ta p:last-child{margin:0}
+
+/* two listings side by side: a sequence or two correct ways, not a verdict */
+.twinS{display:grid;gap:.8rem;margin:1rem 0}
+@media(min-width:800px){.twinS{grid-template-columns:1fr 1fr}}
+.twinS > div{border:1px solid var(--line);border-radius:.8rem;padding:.7rem .8rem .8rem;background:#f8fafc}
+.twinS > div:last-child{border-color:#c7d2fe;background:#f5f7ff}
+.twinS h4{margin:0 0 .45rem;font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute)}
+.twinS > div:last-child h4{color:var(--accent)}
+pre.code{font-family:var(--mono);font-size:.8rem;line-height:1.7;background:#0f172a;color:#e2e8f0;padding:.8rem 1rem;border-radius:.7rem;
+  overflow-x:auto;margin:0;white-space:pre}
+.k{color:#c4b5fd}.t{color:#fcd34d}.f{color:#7dd3fc}.n{color:#fdba74}.c{color:#64748b;font-style:italic}.s{color:#86efac}
+
+/* the live listing inside a simulator */
+.codewrap{position:relative;flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+.codewrap .cpy{position:absolute;top:.45rem;right:.55rem;z-index:2;appearance:none;font-family:inherit;font-size:.64rem;font-weight:800;
+  color:#cbd5e1;background:#1e293b;border:1px solid #334155;border-radius:.35rem;padding:.2rem .5rem;cursor:pointer}
+.codewrap .cpy:hover{color:#fff;border-color:#818cf8}
+pre.code.lines{padding:.6rem 0;flex:1 1 auto;max-height:min(64vh,560px);overflow:auto;font-size:.8rem;line-height:1.72}
+pre.code.lines .cl{display:grid;grid-template-columns:2.6em max-content auto auto 1fr;align-items:center;padding:0 .6rem 0 0;height:1.72em;width:max-content;min-width:100%;
+  cursor:pointer;border-radius:0;transition:background .2s,box-shadow .2s}
+pre.code.lines .cl:hover{background:rgba(148,163,184,.08)}
+pre.code.lines .cl .gn{color:#475569;text-align:right;padding-right:.9em;user-select:none;font-size:.86em}
+pre.code.lines .cl .tx{white-space:pre}
+pre.code.lines .cl.cur{background:rgba(251,191,36,.22);box-shadow:inset 3px 0 0 #f59e0b}
+pre.code.lines .cl.cur.simtrue{background:rgba(34,197,94,.2);box-shadow:inset 3px 0 0 #22c55e}
+pre.code.lines .cl.cur.simfalse{background:rgba(244,63,94,.18);box-shadow:inset 3px 0 0 #f43f5e}
+pre.code.lines .cl.struck .tx{text-decoration:line-through;text-decoration-color:#f43f5e;text-decoration-thickness:2px;color:#64748b}
+pre.code.lines .cl.fold .tx{color:#94a3b8;font-style:italic}
+pre.code.lines .cl.fold .tx b{font-style:normal;color:#a5b4fc}
+pre.code.lines .fh{width:max-content;min-width:100%;height:1.72em;line-height:1.72em;padding:0 .6rem 0 2.6em;color:#a5b4fc;font-size:.72rem;font-weight:700;cursor:pointer;user-select:none}
+pre.code.lines .tg{font-family:var(--sans);font-size:.56rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:.25rem;
+  padding:.02rem .32rem;margin-left:.6rem}
+pre.code.lines .tg.new{background:#064e3b;color:#6ee7b7}
+pre.code.lines .tg.changed{background:#422006;color:#fcd34d}
+pre.code.lines .pp{color:#818cf8;font-size:.62rem;letter-spacing:.02em;margin-left:.5rem;white-space:nowrap}
+.cttl small{font-size:.5rem;letter-spacing:.1em;color:#cbd5e1;font-weight:700;text-transform:none}
+
+/* the parts that sit under a drawing */
+.simfig{display:flex;justify-content:center;width:100%}
+.simfig svg{display:block;height:auto;max-width:100%}
+.fsbody .simfig svg{max-width:min(100%,calc(var(--W) * 1.75))}
+.cons{border:1px solid #e2e8f0;border-radius:.55rem;overflow:hidden}
+.cons .ch{font-size:.5rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#94a3b8;background:#f8fafc;padding:.3rem .6rem;
+  border-bottom:1px solid #e2e8f0}
+.cons pre{overflow:auto;margin:0;padding:.45rem .7rem;font-family:var(--mono);font-size:.86rem;font-weight:700;color:#0f172a;line-height:1.5;min-height:calc(1.5em + .9rem);white-space:pre}
+.checks{font-family:var(--mono);font-size:.9rem;background:#0f172a;color:#e2e8f0;border-radius:.7rem;padding:.7rem .9rem;flex:1 1 auto}
+.checks div{padding:.12rem .4rem;border-radius:.3rem}
+.checks div.cur{background:rgba(251,191,36,.22);box-shadow:inset 3px 0 0 #f59e0b}
+.checks .v{color:#64748b}
+.checks .hid{visibility:hidden}
+.checks .stop{color:#fda4af;font-weight:700}
+.tblw{overflow-x:auto}
+table.tbl{border-collapse:collapse;font-size:.82rem;width:100%}
+table.tbl td,table.tbl th{white-space:nowrap}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:.22rem .5rem;text-align:left}
+table.tbl th{background:#f8fafc;color:var(--ink-mute);font-size:.66rem;letter-spacing:.06em;text-transform:uppercase}
+table.tbl td.mono{font-family:var(--mono);font-weight:700;white-space:nowrap}
+table.tbl .hid{visibility:hidden}
+table.tbl .chg{background:#fffbeb;color:#b45309;font-weight:800;border-radius:.2rem;padding:0 .15rem}
+table.tbl tr.now td{background:#eef2ff}
+.verdict{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.verdict > div{border:1px solid var(--line);border-radius:.55rem;padding:.4rem .6rem;text-align:center}
+.verdict .vl{font-size:.6rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute)}
+.verdict .vv{font-family:var(--mono);font-size:1.15rem;font-weight:800}
+.verdict.hid .vv{visibility:hidden}
+.verdict.diff > div:first-child{border-color:#fda4af;background:#fff1f2}
+.verdict.diff > div:first-child .vv{color:#be123c}
+.verdict.same > div:first-child{border-color:#6ee7b7;background:#ecfdf5}
+.found{font-weight:800;text-align:center;margin:.35rem 0 0;font-size:.9rem;color:#be123c;min-height:1.4em}
+.tbar{display:flex;flex-wrap:wrap;gap:.45rem .6rem;align-items:center;background:#f8fafc;border:1px solid var(--line);border-radius:.6rem;padding:.5rem .7rem}
+.tbar label{font-size:.78rem;font-weight:800;color:var(--ink-soft)}
+.starts{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center}
+.starts span{font-size:.78rem;font-weight:800;color:var(--ink-soft);margin-right:.2rem}
+.starts .btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sim .simmsg{min-height:4.6rem}
+.simcol > .simwatch{min-height:1.9rem}
+.simcol .cttl{margin-bottom:-.1rem}
+.counts{font-size:.8rem;font-weight:700;color:var(--ink-soft)}
+
+/* what we learned, and practice */
+.bridge{background:linear-gradient(135deg,#0f172a,#1e293b);border-left:5px solid var(--accent);border-radius:.85rem;padding:1.2rem 1.2rem;
+  color:#cbd5e1;margin:0 0 2.6rem;box-shadow:var(--sh-md)}
+.bridge .kicker{color:#a5b4fc}
+.bridge h3{color:#fff;margin:.1rem 0 .6rem;font-size:1.15rem}
+.bridge ol{margin:0;padding-left:1.2rem}
+.bridge li{margin:.35rem 0}
+.bridge code{background:rgba(255,255,255,.08);color:#e0e7ff;border:1px solid rgba(255,255,255,.15);border-radius:.3rem;padding:.02rem .3rem;font-size:.88em}
+.practice{background:#fff;border:1px dashed #6ee7b7;border-radius:.85rem;padding:.9rem 1.1rem;margin-bottom:2rem}
+.practice h3{margin:0 0 .4rem;font-size:.95rem;color:#047857}
+.ptbl{border-collapse:collapse;font-size:.9rem}
+.ptbl th,.ptbl td{border-bottom:1px solid var(--line);padding:.25rem .8rem .25rem 0;text-align:left}
+.ptbl th{font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute)}
+.ptbl td:first-child{font-family:var(--mono);font-weight:800;color:#047857}
+.ptbl a{color:#3730a3;font-weight:700}
+.pnote{font-size:.78rem;color:var(--ink-mute);margin:.45rem 0 0}
+footer{color:var(--ink-mute);font-size:.78rem;text-align:center;padding:1rem 0 2rem}
+/* ---- 2D page ---- */
+.inbar input.xs{width:3.2rem}
+.inbar input.wide{width:17rem}
+.widget{border:1px solid var(--line);border-radius:.8rem;padding:.7rem .8rem;background:#fcfdff;margin:.4rem 0 .8rem}
+.wmsg{margin:.4rem 0 0;font-weight:600;color:var(--ink-soft);text-align:center;min-height:1.6em}
+.vtabs{display:flex;gap:.35rem;justify-content:center;margin-bottom:.5rem}
+.vtabs button{appearance:none;font-family:inherit;font-size:.8rem;font-weight:800;padding:.35rem .8rem;border-radius:.5rem;border:2px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer}
+.vtabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.vclick{cursor:pointer}
+.hintbox{margin-top:1rem;border:1px dashed #a5b4fc;border-radius:.8rem;padding:.6rem .9rem;background:#f8f9ff}
+.hintbox .hh{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:#4f46e5;margin-bottom:.2rem}
+.hintbox p{margin:0 0 .3rem;font-size:.92rem}
+.hintbox .widget{margin:.3rem 0 0;text-align:center}
+.memrow{transition:transform .9s ease}
+.inits{display:grid;gap:.7rem}
+@media(min-width:800px){.inits{grid-template-columns:1fr 1fr}}
+.init{border:1px solid var(--line);border-radius:.6rem;padding:.5rem;background:#fff}
+.init pre.code{font-size:.74rem;padding:.4rem .6rem;margin-bottom:.4rem}
+.init p{margin:.3rem 0 0;font-size:.86rem;text-align:center;color:var(--ink-soft)}
+.ch2{font-size:.5rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#94a3b8;margin-bottom:.2rem}
+.stream{display:flex;flex-wrap:wrap;gap:.2rem .35rem;font-family:var(--mono);font-size:.86rem;font-weight:700}
+.stream span{padding:0 .2rem;border-radius:.2rem}
+.stream span.used{color:#cbd5e1;text-decoration:line-through}
+.stream span.next{background:#fffbeb;color:#b45309;outline:1px solid #fcd34d}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.78rem;color:var(--ink-soft)}
+.legend i{display:inline-block;width:.9rem;height:.9rem;border:2px solid;border-radius:.2rem;vertical-align:-.12rem;margin-right:.3rem}
+mark.chgm{background:#422006;color:#fcd34d;border-radius:.2rem;padding:0 .1rem}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><div class="brand-badge">1AM</div>
+      <div><div class="brand-t">2D arrays — a table, or an array of arrays</div><div class="brand-s">CSE-1121 / 1122 · 12 Nov 2026</div></div></div>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="1" aria-selected="true">1 · Access</button>
+      <button class="tab" role="tab" data-tab="2" aria-selected="false">2 · Rows and diagonals</button>
+      <button class="tab" role="tab" data-tab="3" aria-selected="false">3 · Think of a table</button>
+      <button class="tab" role="tab" data-tab="4" aria-selected="false">4 · Array of arrays</button>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">2D arrays</div>
+    <h1>A table, <em>or</em> an array of arrays.</h1>
+    <p class="lede">Every box has two names: row <code>i</code>, column <code>j</code> of a table, or box <code>j</code> of the array <code>a[i]</code>. Use the one that makes the problem easy.</p>
+  </div>
+</section>
+
+<main class="wrap">
+
+<!-- =================================================================== TAB 1 -->
+<div class="panel" id="t1" role="tabpanel">
+  <div class="inbar">
+    <label for="t1-r">R =</label><input id="t1-r" class="xs" value="4" autocomplete="off">
+    <label for="t1-c">C =</label><input id="t1-c" class="xs" value="5" autocomplete="off">
+    <label for="t1-v">values:</label><input id="t1-v" class="wide" value="5 8 2 7 4 9 1 6 3 2 4 7 8 2 6 3 5 1 9 8" autocomplete="off" spellcheck="false">
+    <button class="pre" data-tab="1" data-g="4|5|5 8 2 7 4 9 1 6 3 2 4 7 8 2 6 3 5 1 9 8">4 × 5</button>
+    <button class="pre" data-tab="1" data-g="2|3|1 2 3 4 5 6">2 × 3</button>
+    <button class="pre" data-tab="1" data-g="3|2|10 20 30 40 50 60">3 × 2</button>
+    <p class="note">Steps 3 to 7 use this grid. R and C from 1 to 6; the values row by row.</p>
+    <p class="err" id="err-1"></p>
+  </div>
+
+  <div class="card numbered"><div class="badge">1</div><div class="kicker">Step 1</div>
+    <h2>Declare it, and name every box</h2>
+    <p><code>int a[4][5];</code> makes a grid of 4 rows and 5 columns: 20 int boxes. The box <code>a[i][j]</code> is in row <code>i</code> and column <code>j</code>. Click any box.</p>
+    <div class="widget" id="w-names"></div>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>What is the name of the last box of <code>int a[4][5];</code>?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p><code>a[3][4]</code>, not <code>a[4][5]</code>. Rows go 0 to 3, columns go 0 to 4.</p></div>
+    </div>
+  </div>
+
+  <div class="card numbered"><div class="badge">2</div><div class="kicker">Step 2</div>
+    <h2>Use one box, like a variable</h2>
+    <p>Each box is one <code>int</code>. You can put a value in it, use it in a sum, read it with <code>scanf</code>, and print it. The input here is <code>9</code>.</p>
+    <div id="sim-use"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">3</div><div class="kicker">Step 3</div>
+    <h2>Two ways to see it</h2>
+    <p><b>As a table:</b> rows and columns. <b>As an array of arrays:</b> <code>a</code> has 4 boxes, <code>a[0]</code> to <code>a[3]</code>. Each box is a whole 1D array of 5 numbers. So <code>a[1][2]</code> is box 2 of the array <code>a[1]</code>.</p>
+    <div class="widget" id="w-views"></div>
+    <p>For columns and diagonals, think of a table (tabs 2 and 3). For work done row by row, think of 1D arrays, and reuse what you know (tab 4).</p>
+    <div class="hintbox">
+      <div class="hh"><b>Hint · Where is it in memory?</b></div>
+      <p>Memory has no table. Row 0, row 1, row 2 … sit one after another in one long line.</p>
+      <div class="widget" id="w-mem"></div>
+    </div>
+  </div>
+
+  <div class="card numbered"><div class="badge">4</div><div class="kicker">Step 4</div>
+    <h2>Read it: by hand, then a loop, then a loop around the loop</h2>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>First we read the size with one <code>scanf</code>:</p><pre class="code" data-code="blank"></pre><p>What goes inside the quotes?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p><code>"%d %d"</code>: one <code>%d</code> for each variable. Later, <code>scanf("%d", &amp;a[i][j])</code> reads one box, so it has one <code>%d</code>.</p></div>
+    </div>
+    <p>Then row 0, one box at a time. Watch what changes.</p>
+    <div id="sim-read"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">5</div><div class="kicker">Step 5</div>
+    <h2>Print one row</h2>
+    <p>To print row 0, the first index stays 0 and <code>j</code> walks along the row.</p>
+    <div id="sim-prow"></div>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>How do you print row 2 instead?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>Change only the first index: <code>printf("%d ", a[2][j]);</code>. The <code>j</code> loop stays the same.</p></div>
+    </div>
+  </div>
+
+  <div class="card numbered"><div class="badge">6</div><div class="kicker">Step 6</div>
+    <h2>Print every row</h2>
+    <p>One loop for each row, then a loop around the loop. Look at the output at the end.</p>
+    <div id="sim-pall"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">7</div><div class="kicker">Step 7</div>
+    <h2>One row on each line</h2>
+    <p>All the numbers came on one line. Let us try a <code>\n</code> after each number.</p>
+    <div id="sim-pnl"></div>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>Now every number is on its own line. What must we change to print one row on each line?</p>
+        <p class="hint">When does a row end?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>Print each number with a space, as before. After the <code>j</code> loop ends, print one <code>\n</code>. It goes inside the <code>i</code> loop, so each row ends its own line.</p></div>
+    </div>
+    <div id="sim-print"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">8</div><div class="kicker">Step 8</div>
+    <h2>Give values when you declare it</h2>
+    <p>You can fill a 2D array in the same line that declares it. Each inner <code>{ }</code> is one row: one array of the array of arrays.</p>
+    <div class="widget" id="w-init"></div>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>After <code>int a[2][3] = {{7}, {8, 9}};</code>, what is in <code>a[1][1]</code>? And in <code>a[1][2]</code>?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p><code>a[1][1]</code> is 9. <code>a[1][2]</code> is 0: the boxes you leave out become 0. Without <code>= { }</code>, the boxes hold garbage, like the ? boxes of step 2.</p></div>
+    </div>
+  </div>
+
+  <div class="bridge"><div class="kicker">What we learned</div>
+    <ol>
+      <li><code>a[i][j]</code>: row <code>i</code>, column <code>j</code>. Both start at 0. Each box is one <code>int</code>.</li>
+      <li>One row by hand gives a <code>j</code> loop. Every row gives a loop around it.</li>
+      <li>Print a space after each number, and one <code>\n</code> after each row.</li>
+    </ol>
+  </div>
+  <div class="practice" data-rows="61,69"></div>
+</div>
+
+<!-- =================================================================== TAB 2 -->
+<div class="panel" id="t2" role="tabpanel" hidden>
+  <div class="inbar">
+    <label for="t2-n">N =</label><input id="t2-n" class="xs" value="4" autocomplete="off">
+    <label for="t2-v">values:</label><input id="t2-v" class="wide" value="5 1 8 2 7 3 9 4 6 2 1 5 3 8 4 9" autocomplete="off" spellcheck="false">
+    <button class="pre" data-tab="2" data-g="4|4|5 1 8 2 7 3 9 4 6 2 1 5 3 8 4 9">4 × 4</button>
+    <button class="pre" data-tab="2" data-g="3|3|1 2 3 4 5 6 7 8 9">3 × 3</button>
+    <button class="pre" data-tab="2" data-g="5|5|4 1 7 2 9 3 8 2 6 1 5 2 9 4 3 7 1 6 8 2 1 9 3 5 6">5 × 5</button>
+    <p class="note">A square grid: N from 3 to 6.</p>
+    <p class="err" id="err-2"></p>
+  </div>
+
+  <div class="card numbered"><div class="badge">1</div><div class="kicker">Step 1</div>
+    <h2>One row and one column</h2>
+    <p>Row 1 is <code>a[1][0] a[1][1] a[1][2] …</code>: the first index stays. Column 2 is <code>a[0][2] a[1][2] a[2][2] …</code>: the second index stays.</p>
+    <div id="sim-rowcol"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">2</div><div class="kicker">Step 2</div>
+    <h2>The main diagonal</h2>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>The main diagonal is <code>a[0][0]</code>, <code>a[1][1]</code>, <code>a[2][2]</code>, <code>a[3][3]</code>. What do you see in the two indices?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>They are always equal. So one variable is enough: <code>a[i][i]</code>.</p></div>
+    </div>
+    <div id="sim-main"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">3</div><div class="kicker">Step 3</div>
+    <h2>The other diagonal: one goes up, one goes down</h2>
+    <p>It is <code>a[0][3]</code>, <code>a[1][2]</code>, <code>a[2][1]</code>, <code>a[3][0]</code>. The first index goes up and the second goes down, like <code>i</code> and <code>j</code> in the palindrome.</p>
+    <div id="sim-anti"></div>
+    <p><code>i + j</code> is always <code>N - 1</code>, so <code>a[i][N - 1 - i]</code> also works. Two variables are easier to see.</p>
+  </div>
+
+  <div class="card numbered"><div class="badge">4</div><div class="kicker">Step 4</div>
+    <h2>Problem: the difference of the two diagonals</h2>
+    <p>Add each diagonal, then print the difference without its sign (Array sheet SL 66).</p>
+    <div id="sim-diff"></div>
+  </div>
+
+  <div class="bridge"><div class="kicker">What we learned</div>
+    <ol>
+      <li>A row: the first index stays. A column: the second index stays.</li>
+      <li>Main diagonal: <code>a[i][i]</code>. Other diagonal: <code>i</code> goes up, <code>j</code> goes down.</li>
+    </ol>
+  </div>
+  <div class="practice" data-rows="62,63,64,65,66,b1181,b1182,b1183,b1184,b1185,b1186,c263A"></div>
+</div>
+
+<!-- =================================================================== TAB 3 -->
+<div class="panel" id="t3" role="tabpanel" hidden>
+  <div class="inbar">
+    <label for="t3-r">R =</label><input id="t3-r" class="xs" value="3" autocomplete="off">
+    <label for="t3-c">C =</label><input id="t3-c" class="xs" value="4" autocomplete="off">
+    <label for="t3-a">a:</label><input id="t3-a" class="wide" value="5 8 2 7 9 1 6 3 4 7 8 2" autocomplete="off" spellcheck="false">
+    <label for="t3-b">b:</label><input id="t3-b" class="wide" value="1 0 2 1 0 3 1 2 2 1 0 4" autocomplete="off" spellcheck="false">
+    <button class="pre" data-tab="3" data-g="3|4|5 8 2 7 9 1 6 3 4 7 8 2|1 0 2 1 0 3 1 2 2 1 0 4">3 × 4</button>
+    <button class="pre" data-tab="3" data-g="2|3|1 2 3 4 5 6|6 5 4 3 2 1">2 × 3</button>
+    <p class="note">R and C from 1 to 6. Only step 1 uses <code>b</code>.</p>
+    <p class="err" id="err-3"></p>
+  </div>
+
+  <div class="card numbered"><div class="badge">1</div><div class="kicker">Step 1</div>
+    <h2>Matrix sum</h2>
+    <p><code>c[i][j] = a[i][j] + b[i][j]</code>: each box of <code>c</code> is the sum of the same box in <code>a</code> and <code>b</code>.</p>
+    <div id="sim-add"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">2</div><div class="kicker">Step 2</div>
+    <h2>The sum of each column</h2>
+    <p>One sum per column, so the column loop goes outside. The box is still <code>a[i][j]</code>: only the order of the loops changes. The same loop order prints a matrix column by column (SL 67).</p>
+    <div id="sim-colsum"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">3</div><div class="kicker">Step 3</div>
+    <h2>Transpose: rows become columns</h2>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p><code>a</code> is 3 × 4. Its transpose <code>b</code> has row 0 of <code>a</code> as its column 0. What size is <code>b</code>, and where does <code>a[i][j]</code> go?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p><code>b</code> is 4 × 3. <code>a[i][j]</code> goes to <code>b[j][i]</code>: only the two indices swap places.</p></div>
+    </div>
+    <div id="sim-trans"></div>
+  </div>
+
+  <div class="bridge"><div class="kicker">What we learned</div>
+    <ol>
+      <li>For whole matrices, think of a table: the same <code>[i][j]</code> in every grid.</li>
+      <li>Columns: swap the loops, keep <code>a[i][j]</code>. Transpose: <code>b[j][i] = a[i][j]</code>.</li>
+    </ol>
+  </div>
+  <div class="practice" data-rows="70,67,68,73,75,c1772B"></div>
+</div>
+
+<!-- =================================================================== TAB 4 -->
+<div class="panel" id="t4" role="tabpanel" hidden>
+  <div class="inbar">
+    <label for="t4-r">R =</label><input id="t4-r" class="xs" value="3" autocomplete="off">
+    <label for="t4-c">C =</label><input id="t4-c" class="xs" value="4" autocomplete="off">
+    <label for="t4-v">values:</label><input id="t4-v" class="wide" value="1 2 2 1 5 8 2 7 3 4 4 3" autocomplete="off" spellcheck="false">
+    <button class="pre" data-tab="4" data-g="3|4|1 2 2 1 5 8 2 7 3 4 4 3">3 × 4</button>
+    <button class="pre" data-tab="4" data-g="4|5|1 2 3 2 1 4 4 1 4 4 7 1 9 2 5 2 6 6 6 2">4 × 5</button>
+    <p class="note">R from 1 to 6, C from 2 to 6.</p>
+    <p class="err" id="err-4"></p>
+  </div>
+
+  <div class="card"><div class="kicker">Every row is a 1D array</div>
+    <h2>Yesterday's code, once for each row</h2>
+    <p>Take any 1D code. Write <code>a[i][</code> where it had <code>a[</code>, and <code>C</code> where it had <code>n</code>. Then put a loop over <code>i</code> around it.</p>
+    <div class="twinS">
+      <div><h4>1D: the sum of a</h4><pre class="code" data-code="sum1d"></pre></div>
+      <div><h4>2D: the sum of row i</h4><pre class="code" data-code="sumrow"></pre></div>
+    </div>
+  </div>
+
+  <div class="card numbered"><div class="badge">1</div><div class="kicker">Step 1</div>
+    <h2>The sum of each row</h2>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>When we put the loop over <code>i</code> around it, where must <code>sum = 0</code> go?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>Inside the <code>i</code> loop, before the <code>j</code> loop. Every row starts again from 0.</p></div>
+    </div>
+    <div id="sim-rowsum"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">2</div><div class="kicker">Step 2</div>
+    <h2>Mirror every row</h2>
+    <p>Yesterday's reverse: two variables meet in the middle. Now once for each row (Array sheet SL 74).</p>
+    <div id="sim-mirror"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">3</div><div class="kicker">Step 3</div>
+    <h2>Which rows are palindromes?</h2>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>Row 1 has a mismatch, so <code>f</code> becomes 0. What must happen before row 2?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p><code>f = 1</code> again. Otherwise every later row also says No.</p></div>
+    </div>
+    <div id="sim-pal"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">4</div><div class="kicker">Step 4 · optional</div>
+    <h2>Sort every row</h2>
+    <p>Yesterday's selection sort, once for each row. Here <code>i</code> is the row, <code>k</code> is the round, <code>j</code> searches.</p>
+    <div id="sim-sort"></div>
+  </div>
+
+  <div class="bridge"><div class="kicker">What we learned</div>
+    <ol>
+      <li>Each row <code>a[i]</code> is a 1D array. Yesterday's code works on it.</li>
+      <li>Reset what belongs to one row (<code>sum</code>, <code>f</code>) inside the <code>i</code> loop.</li>
+    </ol>
+  </div>
+  <div class="practice" data-rows="71,76,77,74,b1187,b1188,b1189,b1190,b1435,b1478,b1557,b1827"></div>
+</div>
+</main>
+<footer>Keys in a simulator: <b>n</b> next · <b>b</b> back · <b>p</b> play · <b>r</b> reset · <b>1</b>–<b>4</b> switch the tab.</footer>
+
+<script>
+/* ---- the simulator shell, copied from the CSE-2321 course site (assets/sim.js) ---- */
+/* ==========================================================================
+   CSE-2321 · the simulator shell
+   --------------------------------------------------------------------------
+   One driver for every simulator on the site. A page describes its steps and
+   draws its own picture; this file supplies the frame, the step rail, the
+   watch strip, the narration, the buttons, Focus, and the keyboard.
+
+   Two shapes:
+     stepped  — pass `steps`; you get a rail, a counter, Next/Back/Reset, and
+                buttons that disable at both ends.
+     free     — omit `steps`; the student drives it. You still get the frame,
+                Focus, watches and narration.
+
+   Two options a stepped simulator may add:
+     play     — put a <button data-k="play"> in the control row and the shell
+                owns the auto-advance: label, interval, stopping at the end,
+                stopping the moment anyone touches Next, Back, Reset or the
+                rail, and the `p` key. `play:1100` sets the pause in ms.
+     lines    — nominate the nodes that are the listing: `lines:'#x .st'`.
+                The shell then marks the live one `cur` every step, scrolls it
+                into view only when it is off-screen, and — where a step
+                carries `cond:{ln,ok}` — marks that line `simtrue` or
+                `simfalse`, tints its rail segment green or red, and prints
+                TRUE or FALSE beside the narration. The nodes can be anything:
+                on the flowchart page they are the SVG shapes, so the decision
+                diamond itself goes green on Yes and red on No.
+
+                A widget may show the SAME step in two listings at once — the
+                numbered procedure and the C++ beside it — at different line
+                numbers. Pass a list, each with its own index, and switching
+                tabs never loses your place:
+
+                  lines:[{sel:'#x [data-pane=\"a\"] .st', of:function(s){return s.la;}},
+                         {sel:'#x [data-pane=\"c\"] .cl', of:function(s){return s.lc;}}]
+
+   ES5 on purpose: it has to match the rest of the site, and it has to run
+   from file:// on a classroom laptop with no build step.
+
+   VERSION. Every page links this file as `sim.js?v=N`. GitHub Pages lets a
+   browser cache it, so a laptop that has already opened the site can keep
+   serving an old copy after a change. BUMP THE ?v= ON EVERY PAGE whenever
+   this file or sim.css changes, or the change will not reach the room.
+   ========================================================================== */
+window.Sim = (function(){
+"use strict";
+
+var $  = function(s,r){ return (r||document).querySelector(s); };
+var $$ = function(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
+
+var REG = [];          /* every mounted simulator, for the keyboard */
+var ov=null, fsBody=null, fsName=null, holder=null, openSim=null;
+var THEME_KEY='cse2321-focus-skin';
+
+/* ---------- the Focus overlay: built once, shared by every simulator ------
+   Focus MOVES the block into the overlay and puts it back on close, so there
+   is only ever one copy of the DOM and no state to keep in sync.          */
+function buildOverlay(){
+  if(ov) return;
+  ov=document.createElement('div');
+  ov.className='fsov';
+  ov.innerHTML='<div class="fsbar"><span class="fsnm" id="fs-nm"></span>'+
+               '<button class="fslt" type="button" id="fs-lt" title="Light or dark bench"></button>'+
+               '<button class="fsx" type="button" id="fs-x">Esc &#10005;</button></div>'+
+               '<div class="fsbody" id="fs-body"></div>';
+  document.body.appendChild(ov);
+  fsBody=$('#fs-body',ov); fsName=$('#fs-nm',ov);
+  $('#fs-x',ov).addEventListener('click',function(){ close(); });
+
+  /* Dark is the default: highest contrast in a lit room. Some projectors
+     cannot draw a convincing black, so the skin is a choice and it sticks. */
+  var lt=$('#fs-lt',ov);
+  function paintSkin(){
+    var light=ov.classList.contains('lit');
+    lt.innerHTML = light ? '\u263E Dark' : '\u2600 Light';
+    lt.setAttribute('aria-pressed', light?'true':'false');
+  }
+  var saved=null; try{ saved=localStorage.getItem(THEME_KEY); }catch(e){}
+  if(saved==='light') ov.classList.add('lit');
+  paintSkin();
+  lt.addEventListener('click',function(){
+    ov.classList.toggle('lit');
+    try{ localStorage.setItem(THEME_KEY, ov.classList.contains('lit')?'light':'dark'); }catch(e){}
+    paintSkin();
+    if(openSim) openSim.refit();
+  });
+  ov.addEventListener('click',function(e){ if(e.target===ov) close(); });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape' && ov.classList.contains('on')) close();
+  });
+}
+
+function open(sim){
+  buildOverlay();
+  if(openSim) close();
+  holder=document.createComment('sim-focus-placeholder');
+  sim.el.parentNode.insertBefore(holder, sim.el);
+  fsBody.appendChild(sim.el);
+  fsName.textContent = sim.name || '';
+  ov.classList.add('on');
+  document.body.classList.add('fsopen');
+  openSim=sim;
+  mark();
+  /* refit after the overlay has actually laid out, not on one frame */
+  sim.refit();
+  void ov.offsetWidth;
+  requestAnimationFrame(function(){ sim.refit(); });
+  setTimeout(function(){ sim.refit(); },150);
+  $('#fs-x',ov).focus({preventScroll:true});
+}
+
+function close(){
+  if(!openSim) return;
+  var sim=openSim;
+  if(holder && holder.parentNode) holder.parentNode.replaceChild(sim.el, holder);
+  holder=null; openSim=null;
+  mark();
+  ov.classList.remove('on');
+  document.body.classList.remove('fsopen');
+  sim.refit();
+  var b=$('.focusb',sim.el); if(b) b.focus({preventScroll:true});
+}
+
+/* ---------- one simulator ---------- */
+function make(cfg){
+  var el = typeof cfg.el==='string' ? $(cfg.el) : cfg.el;
+  if(!el) return null;
+
+  var steps  = cfg.steps || null;
+  var railEl = $('.simrail',el);
+  var msgEl  = $('.simmsg p',el);
+  var numEl  = $('.simmsg .smn',el);
+  var watEl  = $('.simwatch',el);
+  var cntEl  = $('.simcnt',el);
+  var metEl  = $('.simmeter b',el);
+  var bNext  = $('[data-k="next"]',el);
+  var bBack  = $('[data-k="back"]',el);
+  var bReset = $('[data-k="reset"]',el);
+  var bPlay  = $('[data-k="play"]',el);
+  var focusB = $('.focusb',el);
+
+  var i=0, lastWatch={};
+  var timer=null;                         /* the Play interval, if one is running */
+  var PLAY_MS = (typeof cfg.play==='number' && cfg.play>0) ? cfg.play : 1000;
+  var lineEls=null, verdEl=null;
+
+  var api={
+    el:el,
+    /* Bring something into view ONLY if it is actually outside the box it
+       lives in, and then by the smallest amount that works. Re-centring the
+       view on every press makes a walk impossible to follow — the thing that
+       changed stays still and the whole picture slides underneath it. */
+    reveal:function(target,container){
+      if(!target||!container) return;
+      var t=target.getBoundingClientRect(), c=container.getBoundingClientRect();
+      var pad=12;
+      if(t.top < c.top+pad)            container.scrollTop -= (c.top+pad) - t.top;
+      else if(t.bottom > c.bottom-pad) container.scrollTop += t.bottom - (c.bottom-pad);
+    },
+    name: cfg.name || (($('.simnm',el)||{}).textContent||'').trim(),
+    index:function(){ return i; },
+    count:function(){ return steps?steps.length:0; },
+    msg:function(html){ if(msgEl) msgEl.innerHTML=html; },
+    /* A watch chip flashes on the step where its value changed, so nothing
+       moves silently. Pass [['LOC',4],['C',2]] — order is kept. */
+    watch:function(list,opt){
+      if(!watEl) return;
+      var h='',seen={};
+      for(var k=0;k<list.length;k++){
+        var n=list[k][0], v=String(list[k][1]);
+        var extra=(list[k][2]||'');
+        seen[n]=v;
+        var chg = (lastWatch.hasOwnProperty(n) && lastWatch[n]!==v);
+        h+='<span class="wch'+(chg?' chg':'')+(extra?' '+extra:'')+'">'+
+           '<span class="wn">'+n+'</span><span class="wv">'+v+'</span></span>';
+      }
+      watEl.innerHTML=h;
+      if(!opt||!opt.keep) lastWatch=seen;
+    },
+    resetWatch:function(){ lastWatch={}; },
+    meter:function(v){ if(metEl) metEl.textContent=v; },
+    focus:function(){ open(api); },
+    refit:function(){ if(cfg.onFit) cfg.onFit(api); },
+    hasPlay:function(){ return !!(bPlay && steps); },
+    playing:function(){ return !!timer; },
+    toggle:function(){ if(timer) pause(); else play(); },
+    go:go, next:next, back:back, reset:reset, play:play, pause:pause,
+    /* local addition for lectures (2026-11 pages): new steps after the input changes */
+    setSteps:function(s){ pause(); steps=s; i=0; lastWatch={}; paint(); }
+  };
+
+/* ---------- Play: the shell owns the clock -------------------------------
+   A lecturer starts the run, then talks over it. So Play must stop itself at
+   the last step, stop the instant anyone reaches for Next or Back — the
+   press means "I want to drive now" — and start over if pressed at the end,
+   because nobody presses Play to watch nothing happen.                    */
+  function playLabel(){
+    if(!bPlay) return;
+    bPlay.innerHTML = timer ? (bPlay.getAttribute('data-on')  || '\u23F8 Pause')
+                            : (bPlay.getAttribute('data-off') || '\u25B6 Play');
+    bPlay.setAttribute('aria-pressed', timer?'true':'false');
+  }
+  function pause(){ if(timer){ clearInterval(timer); timer=null; playLabel(); } }
+  function play(){
+    if(!steps || !bPlay || timer) return;
+    if(i>=steps.length-1){ i=0; lastWatch={}; paint(); }
+    timer=setInterval(function(){
+      if(i<steps.length-1){ i++; paint(); }
+      else pause();
+    },PLAY_MS);
+    playLabel();
+  }
+
+/* ---------- the listing: one live line, and the answer to its condition ---
+   Every stepper on the site was doing this by hand, and every one of them
+   was doing it slightly differently. The page says which nodes are lines;
+   the shell says which one is live and what a condition on it evaluated to. */
+  /* one listing, or several shown side by side — each with its own index */
+  function listings(){
+    if(lineEls) return lineEls;
+    var L=cfg.lines;
+    if(!L){ lineEls=[]; return lineEls; }
+    var dflt = cfg.lineOf || function(st){ return st.l; };
+    if(typeof L==='string')      lineEls=[{nodes:$$(L), of:dflt, first:true}];
+    else if(L.length===undefined) lineEls=[{nodes:[L], of:dflt, first:true}];
+    else if(typeof L[0]==='string' || (L[0] && L[0].nodeType))
+                                 lineEls=[{nodes:(typeof L[0]==='string'?$$(L[0]):L), of:dflt, first:true}];
+    else lineEls=L.map(function(x,i){
+      return {nodes: typeof x.sel==='string' ? $$(x.sel) : x.sel,
+              of: x.of || dflt, first:i===0};
+    });
+    return lineEls;
+  }
+  /* the box the listing scrolls inside, if it scrolls at all */
+  function scroller(node){
+    if(cfg.pane) return $(cfg.pane);
+    var p=node.parentNode;
+    while(p && p.nodeType===1){
+      var ov=window.getComputedStyle(p).overflowY;
+      if((ov==='auto'||ov==='scroll') && p.scrollHeight>p.clientHeight+1) return p;
+      p=p.parentNode;
+    }
+    return null;
+  }
+  function indexIn(set, st){
+    if(!st) return null;
+    /* cond.ln names a line in the FIRST listing only — with several listings
+       each one already carries its own index function */
+    if(set.first && st.cond && typeof st.cond.ln==='number') return st.cond.ln;
+    var n=set.of(st);
+    return typeof n==='number' ? n : null;
+  }
+  function paintLines(st){
+    var sets=listings(); if(!sets.length) return;
+    var c=st&&st.cond;
+    for(var q=0;q<sets.length;q++){
+      var nodes=sets[q].nodes, idx=indexIn(sets[q],st);
+      for(var k=0;k<nodes.length;k++){
+        var on=(k===idx);
+        nodes[k].classList.toggle('cur',on);
+        nodes[k].classList.toggle('simtrue',  on && !!c && c.ok===true);
+        nodes[k].classList.toggle('simfalse', on && !!c && c.ok===false);
+      }
+      /* looked up fresh every step: Focus moves the block, so the box a line
+         scrolls inside is not the same box it was a moment ago. A listing that
+         is not on screen (the hidden half of a tab pair) has no scroller. */
+      if(idx!==null && nodes[idx] && nodes[idx].offsetParent!==null){
+        var pane=scroller(nodes[idx]);
+        if(pane) api.reveal(nodes[idx], pane);
+      }
+    }
+  }
+  /* TRUE or FALSE, beside the step number, in the shell's own words */
+  function verdict(st){
+    var c = st && st.cond;
+    if(!verdEl){
+      if(!c || !msgEl) return;
+      verdEl=document.createElement('span');
+      verdEl.className='smv';
+      msgEl.parentNode.insertBefore(verdEl,msgEl);
+    }
+    verdEl.className = c ? ('smv on '+(c.ok?'tr':'fl')) : 'smv';
+    if(c) verdEl.textContent = c.ok ? 'TRUE' : 'FALSE';
+  }
+
+  function railPaint(){
+    if(!railEl||!steps) return;
+    var groups=[], cur=null;
+    for(var k=0;k<steps.length;k++){
+      var g = cfg.group ? cfg.group(steps[k],k) : '';
+      if(cur===null || g!==cur){ cur=g; groups.push({l:g,items:[]}); }
+      groups[groups.length-1].items.push(k);
+    }
+    var h='';
+    for(var q=0;q<groups.length;q++){
+      h+='<div class="grp" data-l="'+groups[q].l+'" style="--f:'+groups[q].items.length+'">';
+      for(var j=0;j<groups[q].items.length;j++){
+        var n=groups[q].items[j], c='sg';
+        if(n<i) c+=' done';
+        if(n===i) c+=' now';
+        else {
+          /* a step that tested something colours its own segment */
+          var t = cfg.tone ? cfg.tone(steps[n],n)
+                : (steps[n].cond ? (steps[n].cond.ok?'tr':'fl') : null);
+          if(t) c+=' '+t;
+        }
+        h+='<button class="'+c+'" type="button" data-i="'+n+'" '+
+           'aria-label="Step '+(n+1)+(groups[q].l?', '+groups[q].l:'')+'"></button>';
+      }
+      h+='</div>';
+    }
+    railEl.innerHTML=h;
+  }
+
+  function paint(){
+    if(steps){
+      if(cfg.render) cfg.render(steps[i], i, api);
+      paintLines(steps[i]);
+      verdict(steps[i]);
+      if(numEl) numEl.textContent=i+1;
+      if(cntEl) cntEl.textContent=(i+1)+' / '+steps.length;
+      if(bNext)  bNext.disabled  = i>=steps.length-1;
+      if(bBack)  bBack.disabled  = i<=0;
+      railPaint();
+    } else {
+      if(cfg.render) cfg.render(null, 0, api);
+    }
+  }
+
+  function go(n){
+    pause();
+    if(!steps) return;
+    n=Math.max(0,Math.min(steps.length-1,n));
+    if(n===i) { paint(); return; }
+    /* jumping backwards must not leave stale "changed" flags behind */
+    if(n<i) lastWatch={};
+    i=n; paint();
+  }
+  function next(){ pause(); if(steps && i<steps.length-1){ i++; paint(); } }
+  function back(){ pause(); if(steps && i>0){ lastWatch={}; i--; paint(); } }
+  function reset(){
+    pause(); lastWatch={};
+    if(steps){ i=0; paint(); }
+    else if(cfg.onReset){ cfg.onReset(api); }
+  }
+
+  if(bNext)  bNext.addEventListener('click',next);
+  if(bBack)  bBack.addEventListener('click',back);
+  if(bReset) bReset.addEventListener('click',reset);
+  if(bPlay){ bPlay.addEventListener('click',function(){ api.toggle(); }); playLabel(); }
+  if(focusB) focusB.addEventListener('click',function(){ open(api); });
+  if(railEl) railEl.addEventListener('click',function(e){
+    var b=e.target.closest ? e.target.closest('.sg') : null;
+    if(b) go(+b.getAttribute('data-i'));
+  });
+
+  REG.push(api);
+  paint();
+  return api;
+}
+
+/* ---------- n / b / r drive the simulator you are looking at --------------
+   A lecture is run from the keyboard: the mouse is for pointing at the wall,
+   not for hunting a Next button. The keys always mean the simulator in Focus,
+   or failing that the one covering most of the view. `p` plays and pauses,
+   but only where the simulator actually has a Play button.                */
+function keyTarget(){
+  if(openSim) return openSim;
+  var H=window.innerHeight, mid=H/2, bestVis=0, bestD=1e9, target=null;
+  for(var j=0;j<REG.length;j++){
+    var r=REG[j].el.getBoundingClientRect();
+    var vis=Math.min(r.bottom,H)-Math.max(r.top,0);
+    if(vis<=0) continue;
+    var d=Math.abs((r.top+r.bottom)/2-mid);
+    /* most screen wins; a tie goes to the one nearer the middle */
+    if(vis>bestVis+1 || (Math.abs(vis-bestVis)<=1 && d<bestD)){
+      bestVis=vis; bestD=d; target=REG[j];
+    }
+  }
+  return target;
+}
+
+/* ---------- say which block the keys are pointing at ----------------------
+   Pressing n when you thought you were driving the other simulator is a
+   confusing half-second in front of a class. The block the keys currently
+   own carries a quiet ring, kept in step with the page as it scrolls. It
+   uses keyTarget(), so the ring and the keys cannot disagree. */
+var marked=null, markTick=null;
+function mark(){
+  markTick=null;
+  var t=keyTarget();
+  var el=(t && !openSim) ? t.el : null;
+  if(el===marked) return;
+  if(marked) marked.classList.remove('simon');
+  marked=el;
+  if(marked) marked.classList.add('simon');
+}
+function markSoon(){ if(!markTick) markTick=setTimeout(mark,120); }
+window.addEventListener('scroll',markSoon,{passive:true});
+window.addEventListener('resize',markSoon);
+
+document.addEventListener('keydown',function(e){
+  var t=document.activeElement;
+  if(t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+  if(t && t.isContentEditable) return;
+  if(e.metaKey||e.ctrlKey||e.altKey) return;
+  var k=e.key.toLowerCase();
+  if(k!=='n'&&k!=='b'&&k!=='r'&&k!=='p') return;
+
+  var target=keyTarget();
+  if(!target) return;
+  /* p only belongs to a simulator that has a Play button; everywhere else it
+     stays a free key for the page to use. */
+  if(k==='p'){ if(!target.hasPlay()) return; target.toggle(); }
+  else if(k==='n') target.next();
+  else if(k==='b') target.back();
+  else target.reset();
+  e.preventDefault();
+});
+
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',mark);
+else setTimeout(mark,0);
+
+return { make:make, open:open, close:close, all:function(){ return REG.slice(); },
+         keyTarget:keyTarget };
+})();
+
+</script>
+<script id="logic">
+/* =====================================================================
+   LOGIC — no DOM in this file.
+   Every program here is the exact text the page shows. Each builder runs
+   the program once on the input and records one step per line that runs.
+   The page only moves through that list. c/check.js loads this file,
+   compiles each program with gcc and compares the result.
+   ===================================================================== */
+"use strict";
+var LOGIC = (function () {
+  var clone = function (o) { return JSON.parse(JSON.stringify(o)); };
+  var q = function (v) { return v === null || v === undefined ? '?' : v; };
+
+  function parseList(s, min, max, name) {
+    var t = String(s).trim().split(/[\s,]+/).filter(Boolean);
+    var who = name ? name + ': ' : '';
+    for (var k = 0; k < t.length; k++) {
+      if (!/^-?\d+$/.test(t[k])) return {err: who + '"' + t[k] + '" is not a whole number.'};
+      if (Math.abs(parseInt(t[k], 10)) > 99) return {err: who + 'please use numbers from -99 to 99.'};
+    }
+    if (t.length < min) return {err: who + 'please type at least ' + min + (min === 1 ? ' number.' : ' numbers.')};
+    if (t.length > max) return {err: who + 'please type at most ' + max + ' numbers.'};
+    return {v: t.map(function (x) { return parseInt(x, 10); })};
+  }
+  /* R and C (or N), then exactly R*C values */
+  function parseSize(s, lo, hi, name) {
+    var t = String(s).trim();
+    if (!/^\d+$/.test(t) || +t < lo || +t > hi) return {err: name + ' must be a number from ' + lo + ' to ' + hi + '.'};
+    return {v: +t};
+  }
+  function parseGrid(vals, R, C, name) {
+    var p = parseList(vals, 1, 36, name);
+    if (p.err) return p;
+    if (p.v.length !== R * C) return {err: name + ': we need ' + R + ' × ' + C + ' = ' + (R * C) + ' numbers. You typed ' + p.v.length + '.'};
+    return {v: p.v};
+  }
+
+  /* ---------- the program model (as on the 11 Nov page) ----------
+     P.at(text) finds the first line that STARTS with text (spaces ignored).
+     A block may fold to one line, carry a "changed" tag, or be struck out. */
+  var PID = 0;
+  function prog(blocks) {
+    var P = {id: ++PID, lines: [], blocks: []};
+    blocks.forEach(function (b, bi) {
+      var from = P.lines.length;
+      b.lines.forEach(function (x) {
+        var t = typeof x === 'string' ? x : x[0];
+        var tag = typeof x === 'string' ? null : x[1];
+        P.lines.push({t: t, b: bi, tag: tag === 'changed' ? tag : null, struck: !!b.struck});
+      });
+      P.blocks.push({id: b.id || ('b' + bi), fold: b.fold || null, from: from, to: P.lines.length - 1});
+    });
+    P.at = function (sub, after) {
+      var start = 0;
+      if (after !== undefined) start = (typeof after === 'number' ? after : P.at(after)) + 1;
+      for (var k = start; k < P.lines.length; k++)
+        if (!P.lines[k].struck && P.lines[k].t.trim().indexOf(sub.trim()) === 0) return k;
+      throw new Error('line not found: ' + sub);
+    };
+    P.text = function () {
+      return P.lines.filter(function (l) { return !l.struck; }).map(function (l) { return l.t; }).join('\n') + '\n';
+    };
+    return P;
+  }
+  var BL = {lines: ['']};
+  var END = {lines: ['    return 0;', '}']};
+  function head(decl) {
+    return {lines: ['#include <stdio.h>', '', 'int main()', '{'].concat(decl.map(function (d) { return '    ' + d; }))};
+  }
+  var RC = '    scanf("%d %d", &R, &C);';
+  var NEST_READ = function (arr, rows, cols) {
+    return ['    for (i = 0; i < ' + rows + '; i++)', '        for (j = 0; j < ' + cols + '; j++)', '            scanf("%d", &' + arr + '[i][j]);'];
+  };
+  var READ_RC = {id: 'read', fold: 'read R and C, then the grid a', lines: [RC].concat(NEST_READ('a', 'R', 'C'))};
+  var READ_N = {id: 'read', fold: 'read N, then the N × N grid a', lines: ['    scanf("%d", &N);'].concat(NEST_READ('a', 'N', 'N'))};
+  var READ_AB = {id: 'read', fold: 'read R and C, then the grids a and b', lines: [RC].concat(NEST_READ('a', 'R', 'C'), NEST_READ('b', 'R', 'C'))};
+  function printLines(arr, rows, cols) {
+    return ['    for (i = 0; i < ' + rows + '; i++) {', '        for (j = 0; j < ' + cols + '; j++)',
+      '            printf("%d ", ' + arr + '[i][j]);', '        printf("\\n");', '    }'];
+  }
+  function printFold(arr, rows, cols) { return {id: 'print', fold: 'print ' + arr + ' as a table', lines: printLines(arr, rows, cols)}; }
+
+  function recorder() {
+    var S = [];
+    return {S: S, put: function (P, l, say, view, watch, extra) {
+      var st = {prog: P, l: l, say: say, view: clone(view), watch: watch ? clone(watch) : []};
+      if (extra) for (var k in extra) st[k] = extra[k];
+      S.push(st);
+    }};
+  }
+  function mat(R, C, flat) {
+    var g = [];
+    for (var i = 0; i < R; i++) g.push(flat ? flat.slice(i * C, i * C + C) : new Array(C).fill(null));
+    return g;
+  }
+  var key = function (i, j) { return i + ',' + j; };
+  function table(R, C, g) { return {R: R, C: C, g: g, k: {}, ci: null, cj: null, ck: null}; }
+  var tableText = function (g) { return g.map(function (r) { return r.join(' ') + ' \n'; }).join(''); };
+  var loopSay = function (name, val, first, lim) {
+    return (first ? '~' + name + ' = ' + val + '~.' : '~' + name + '++~, so ~' + name + ' = ' + val + '~.') + ' Is ~' + val + ' < ' + lim + '~?';
+  };
+
+  /* =================== TAB 1 · ACCESS =================== */
+
+  /* step 3: row 0 by hand -> a j loop -> one loop per row -> a loop around the loop */
+  function t1Read(R, C, flat) {
+    var Rec = recorder(), toks = [R, C].concat(flat), v = table(R, C, mat(R, C));
+    v.toks = toks; v.pos = 0; v.cur = null;
+    var x = {R: null, C: null, i: null, j: null};
+    var W = function () { return [['R', q(x.R)], ['C', q(x.C)], ['i', q(x.i)], ['j', q(x.j)]]; };
+    var decl = ['int a[10][10], R, C, i, j;'];
+    var P0 = prog([head(decl), BL, {lines: [RC]}, BL, END]);
+    v.pos = 2; x.R = R; x.C = C;
+    Rec.put(P0, P0.at('scanf("%d %d"'), 'Read ~R = ' + R + '~ and ~C = ' + C + '~.', v, W());
+    var Ph = null, k;
+    for (k = 0; k < C; k++) {
+      var L = [RC];
+      for (var t = 0; t <= k; t++) L.push('    scanf("%d", &a[0][' + t + ']);');
+      Ph = prog([head(decl), BL, {lines: L}, BL, END]);
+      v.g[0][k] = toks[v.pos]; v.pos++; v.cur = [0, k];
+      Rec.put(Ph, Ph.at('scanf("%d", &a[0][' + k + '])'), 'Read ' + v.g[0][k] + ' into ~a[0][' + k + ']~.', v, W(), {grp: 'by hand'});
+    }
+    v.cur = null;
+    var hs = []; for (k = 0; k < C; k++) hs.push('    scanf("%d", &a[0][' + k + ']);');
+    var rowLoop = function (r) { return ['    for (j = 0; j < C; j++)', '        scanf("%d", &a[' + r + '][j]);']; };
+    var Pd = prog([head(decl), BL, {lines: [RC]}, {struck: true, lines: hs}, {lines: rowLoop(0)}, BL, END]);
+    Rec.put(Pd, Pd.at('for (j = 0; j < C; j++)'), 'Only the second number changes: 0, 1, 2 … Call it ~j~. Two lines read the whole row.', v, W(), {grp: 'by hand'});
+    var rs = [], r;
+    for (r = 0; r < R; r++) rs = rs.concat(rowLoop(r));
+    if (R > 1) {
+      var Pr = prog([head(decl), BL, {lines: [RC].concat(rs)}, BL, END]);
+      Rec.put(Pr, Pr.at('scanf("%d", &a[1][j])') - 1, 'Each row needs the same two lines. Only the first number changes: 0, 1, 2 …', v, W(), {grp: 'by hand'});
+    }
+    var NEST = NEST_READ('a', 'R', 'C');
+    var Pd2 = prog([head(decl), BL, {lines: [RC]}, {struck: true, lines: rs}, {lines: NEST}, BL, END]);
+    Rec.put(Pd2, Pd2.at('for (i = 0; i < R; i++)'), 'So we put a loop around the loop. ~i~ picks the row, ~j~ picks the column.', v, W(), {grp: 'by hand'});
+    var Pn = prog([head(decl), BL, {lines: [RC].concat(NEST)}, BL, END]);
+    var Li = Pn.at('for (i = 0; i < R; i++)'), Lj = Pn.at('for (j = 0; j < C; j++)'), Ls = Pn.at('scanf("%d", &a[i][j])');
+    v.g = mat(R, C); v.pos = 2;
+    Rec.put(Pn, Pn.at('scanf("%d %d"'), 'The grid is empty again. Now the nested loop reads it.', v, W());
+    for (var i = 0; ; i++) {
+      var ok = i < R; x.i = i; x.j = null; v.ci = ok ? i : null; v.cj = null;
+      Rec.put(Pn, Li, loopSay('i', i, i === 0, R) + (ok ? ' Row ' + i + '.' : ' No. The grid is full.'), v, W(), {cond: {ok: ok}, grp: ok ? 'row ' + i : ''});
+      if (!ok) break;
+      for (var j = 0; ; j++) {
+        var ok2 = j < C; x.j = j; v.cj = ok2 ? j : null;
+        Rec.put(Pn, Lj, loopSay('j', j, j === 0, C), v, W(), {cond: {ok: ok2}, grp: 'row ' + i});
+        if (!ok2) break;
+        v.g[i][j] = toks[v.pos]; v.pos++; v.cur = [i, j];
+        Rec.put(Pn, Ls, 'Read ' + v.g[i][j] + ' into ~a[' + i + '][' + j + ']~.', v, W(), {grp: 'row ' + i});
+        v.cur = null;
+      }
+    }
+    v.ci = null; v.cj = null;
+    Rec.put(Pn, Pn.at('return 0;'), 'All ' + (R * C) + ' boxes are read: row 0 first, then row 1, and so on.', v, W());
+    return {steps: Rec.S, hand: Ph, loop: Pn};
+  }
+
+  /* step 2: use one box at a time — assign, use, scan, print. Boxes not set yet hold garbage. */
+  function t1Use(inVal) {
+    var Rec = recorder(), v = table(4, 5, mat(4, 5)), out = '';
+    v.garbage = true; v.toks = [inVal]; v.pos = 0; v.cur = null;
+    var P = prog([head(['int a[4][5];']), BL, {lines: ['    a[1][2] = 7;', '    a[3][0] = a[1][2] + 1;', '    scanf("%d", &a[0][4]);',
+      '    printf("%d\\n", a[3][0]);', '    printf("%d\\n", a[0][4] * 2);']}, BL, END]);
+    var put = function (l, say) { Rec.put(P, l, say, v, [], {out: out}); };
+    put(P.at('int a[4][5];'), '~int a[4][5];~ makes 20 boxes. We have not put values in them yet, so they hold garbage (?).');
+    v.g[1][2] = 7; v.cur = [1, 2]; put(P.at('a[1][2] = 7;'), 'Put 7 in the box at row 1, column 2.');
+    v.g[3][0] = 8; v.cur = [3, 0]; put(P.at('a[3][0] = a[1][2] + 1;'), 'A box works like any int variable: ~a[1][2] + 1~ is 8, and it goes into ~a[3][0]~.');
+    v.g[0][4] = inVal; v.pos = 1; v.cur = [0, 4]; put(P.at('scanf("%d", &a[0][4]);'), 'Read ' + inVal + ' from the input into ~a[0][4]~. The box needs ~&~, like any variable.');
+    out += '8\n'; v.cur = [3, 0]; put(P.at('printf("%d\\n", a[3][0]);'), 'Print ~a[3][0]~: 8.');
+    out += (inVal * 2) + '\n'; v.cur = [0, 4]; put(P.at('printf("%d\\n", a[0][4] * 2);'), 'Print ~a[0][4] * 2~: ' + (inVal * 2) + '.');
+    v.cur = null;
+    put(P.at('return 0;'), 'Only 3 of the 20 boxes got a value. The other 17 still hold garbage.');
+    return Rec.S;
+  }
+
+  /* printing, in four stages: one row (no new line), every row, a new line after each number, then the table */
+  function printRun(Rec, P, v, R, C, x, W, outRef, o) {
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: outRef.out}, extra || {})); };
+    var Li = P.at('for (i = 0; i < R; i++)', o.after), Lj = P.at('for (j = 0; j < C; j++)', Li), Lp = P.at('printf("%d', Lj);
+    for (var i = 0; ; i++) {
+      var ok = i < R; x.i = i; x.j = null; v.ci = ok ? i : null; v.cj = null;
+      put(Li, loopSay('i', i, i === 0, R), {cond: {ok: ok}, grp: ok ? 'row ' + i : ''});
+      if (!ok) break;
+      for (var j = 0; ; j++) {
+        var ok2 = j < C; x.j = j; v.cj = ok2 ? j : null;
+        put(Lj, loopSay('j', j, j === 0, C), {cond: {ok: ok2}, grp: 'row ' + i});
+        if (!ok2) break;
+        outRef.out += v.g[i][j] + (o.nl ? '\n' : ' '); v.k[key(i, j)] = 'hit'; v.cur = [i, j];
+        put(Lp, 'Print ~a[' + i + '][' + j + ']~ = ' + v.g[i][j] + (o.nl ? ', then a new line.' : '.'), {grp: 'row ' + i}); v.cur = null;
+      }
+    }
+    v.ci = null; v.cj = null;
+  }
+  var DECL_P = ['int a[10][10], R, C, i, j;'];
+  function t1PrintRow(R, C, flat) {
+    var Rec = recorder(), v = table(R, C, mat(R, C, flat)), o = {out: ''}, x = {j: C};
+    var P = prog([head(DECL_P), BL, READ_RC, BL, {lines: ['    for (j = 0; j < C; j++)', '        printf("%d ", a[0][j]);']}, BL, END]);
+    var W = function () { return [['R', R], ['C', C], ['j', q(x.j)]]; };
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: o.out}, extra || {})); };
+    put(P.at(RC), 'Read ~R~, ~C~ and the grid.');
+    v.fixR = 0;
+    var Lj = P.at('for (j = 0; j < C; j++)', 'scanf("%d", &a[i][j])');
+    for (var j = 0; ; j++) {
+      var ok = j < C; x.j = j; v.cj = ok ? j : null;
+      put(Lj, loopSay('j', j, j === 0, C), {cond: {ok: ok}, grp: ok ? 'row 0' : ''});
+      if (!ok) break;
+      o.out += v.g[0][j] + ' '; v.k[key(0, j)] = 'hit'; v.cur = [0, j];
+      put(P.at('printf("%d ", a[0][j]);'), 'Print ~a[0][' + j + ']~ = ' + v.g[0][j] + '.', {grp: 'row 0'}); v.cur = null;
+    }
+    v.cj = null;
+    put(P.at('return 0;'), 'Row 0 is printed. The first index stays 0; ~j~ walks along the row.');
+    return Rec.S;
+  }
+  function t1PrintAll(R, C, flat) {
+    var Rec = recorder(), v = table(R, C, mat(R, C, flat)), o = {out: ''}, x = {i: R, j: C};
+    var W = function () { return [['R', R], ['C', C], ['i', q(x.i)], ['j', q(x.j)]]; };
+    var rowLoop = function (r) { return ['    for (j = 0; j < C; j++)', '        printf("%d ", a[' + r + '][j]);']; };
+    var rs = [], r;
+    for (r = 0; r < R; r++) rs = rs.concat(rowLoop(r));
+    var Ph = prog([head(DECL_P), BL, READ_RC, BL, {lines: rs}, BL, END]);
+    Rec.put(Ph, Ph.at(RC), 'Read ~R~, ~C~ and the grid. Then one loop for each row.', v, W(), {out: ''});
+    for (r = 0; r < R; r++) {
+      for (var j = 0; j < C; j++) { o.out += v.g[r][j] + ' '; v.k[key(r, j)] = 'hit'; }
+      x.j = C; v.fixR = r;
+      Rec.put(Ph, Ph.at('printf("%d ", a[' + r + '][j]);') - 1, 'This loop prints row ' + r + ': ' + v.g[r].join(' ') + '.', v, W(), {out: o.out, grp: 'by hand'});
+    }
+    v.fixR = null;
+    var NEST = ['    for (i = 0; i < R; i++)', '        for (j = 0; j < C; j++)', '            printf("%d ", a[i][j]);'];
+    var Pd = prog([head(DECL_P), BL, READ_RC, BL, {struck: true, lines: rs}, {lines: NEST}, BL, END]);
+    Rec.put(Pd, Pd.at('for (i = 0; i < R; i++)', 'scanf("%d", &a[i][j])'), 'The ' + R + ' loops differ only in the row number. So we put a loop around the loop.', v, W(), {out: o.out, grp: 'by hand'});
+    var P = prog([head(DECL_P), BL, READ_RC, BL, {lines: NEST}, BL, END]);
+    v.k = {}; o.out = '';
+    Rec.put(P, P.at('for (i = 0; i < R; i++)', 'scanf("%d", &a[i][j])') - 1, 'The output is empty again. Now the nested loop prints.', v, W(), {out: ''});
+    printRun(Rec, P, v, R, C, x, W, o, {after: 'scanf("%d", &a[i][j])', nl: false});
+    Rec.put(P, P.at('return 0;'), 'Every number is printed, but all on one line. It does not look like a table.', v, W(), {out: o.out});
+    return {steps: Rec.S, hand: Ph, loop: P};
+  }
+  function t1PrintNL(R, C, flat) {
+    var Rec = recorder(), v = table(R, C, mat(R, C, flat)), o = {out: ''}, x = {i: R, j: C};
+    var W = function () { return [['R', R], ['C', C], ['i', q(x.i)], ['j', q(x.j)]]; };
+    var P = prog([head(DECL_P), BL, READ_RC, BL, {lines: ['    for (i = 0; i < R; i++)', '        for (j = 0; j < C; j++)', '            printf("%d\\n", a[i][j]);']}, BL, END]);
+    Rec.put(P, P.at(RC), 'Read ~R~, ~C~ and the grid. This time there is a ~\\n~ after each number.', v, W(), {out: ''});
+    printRun(Rec, P, v, R, C, x, W, o, {after: 'scanf("%d", &a[i][j])', nl: true});
+    Rec.put(P, P.at('return 0;'), 'Now every number is on its own line. That is not a table either.', v, W(), {out: o.out});
+    return Rec.S;
+  }
+
+  /* step 4: print as a table */
+  function t1Print(R, C, flat) {
+    var Rec = recorder(), v = table(R, C, mat(R, C, flat)), out = '', x = {i: R, j: C};
+    var P = prog([head(['int a[10][10], R, C, i, j;']), BL, READ_RC, BL, {lines: printLines('a', 'R', 'C')}, BL, END]);
+    var W = function () { return [['R', R], ['C', C], ['i', q(x.i)], ['j', q(x.j)]]; };
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    put(P.at(RC), 'Read ~R~, ~C~ and the grid. The read loops leave ~i = ' + R + '~ and ~j = ' + C + '~.');
+    var Li = P.at('for (i = 0; i < R; i++) {'), Lj = P.at('for (j = 0; j < C; j++)', Li), Lp = P.at('printf("%d ", a[i][j])'), Ln = P.at('printf("\\n")');
+    for (var i = 0; ; i++) {
+      var ok = i < R; x.i = i; v.ci = ok ? i : null; v.cj = null;
+      put(Li, loopSay('i', i, i === 0, R), {cond: {ok: ok}, grp: ok ? 'row ' + i : ''});
+      if (!ok) break;
+      for (var j = 0; ; j++) {
+        var ok2 = j < C; x.j = j; v.cj = ok2 ? j : null;
+        put(Lj, loopSay('j', j, j === 0, C), {cond: {ok: ok2}, grp: 'row ' + i});
+        if (!ok2) break;
+        out += v.g[i][j] + ' '; v.k[key(i, j)] = 'hit'; v.cur = [i, j];
+        put(Lp, 'Print ~a[' + i + '][' + j + ']~ = ' + v.g[i][j] + '.', {grp: 'row ' + i});
+        v.cur = null;
+      }
+      out += '\n';
+      put(Ln, 'Row ' + i + ' is printed. Go to a new line.', {grp: 'row ' + i});
+    }
+    v.ci = null; v.cj = null;
+    put(P.at('return 0;'), 'The output looks like the table.');
+    return Rec.S;
+  }
+
+  /* =================== TAB 2 · ROW, COLUMN, DIAGONALS =================== */
+  var DECL_N = function (extra) { return ['int a[10][10], N, i' + extra + ';']; };
+
+  /* step 1: row 1 by hand -> loop with r; then column 2 with c */
+  function t2RowCol(N, flat) {
+    var Rec = recorder(), v = table(N, N, mat(N, N, flat)), out = '', x = {i: N, j: N, r: null, c: null};
+    var decl = DECL_N(', j, r, c');
+    var W = function () { return [['N', N], ['r', q(x.r)], ['c', q(x.c)], ['i', q(x.i)], ['j', q(x.j)]]; };
+    var P0 = prog([head(decl), BL, READ_N, BL, END]);
+    Rec.put(P0, P0.at('scanf("%d", &N)'), 'Read ~N = ' + N + '~ and the grid.', v, W(), {out: ''});
+    var Ph = null, k;
+    for (k = 0; k < N; k++) {
+      var L = []; for (var t = 0; t <= k; t++) L.push('    printf("%d ", a[1][' + t + ']);');
+      Ph = prog([head(decl), BL, READ_N, BL, {lines: L}, BL, END]);
+      out += v.g[1][k] + ' '; v.k[key(1, k)] = 'hit'; v.cur = [1, k];
+      Rec.put(Ph, Ph.at('printf("%d ", a[1][' + k + '])'), 'Print ~a[1][' + k + ']~ = ' + v.g[1][k] + '.', v, W(), {out: out, grp: 'by hand'});
+    }
+    v.cur = null;
+    var hs = []; for (k = 0; k < N; k++) hs.push('    printf("%d ", a[1][' + k + ']);');
+    var ROW = ['    r = 1;', '    for (j = 0; j < N; j++)', '        printf("%d ", a[r][j]);', '    printf("\\n");'];
+    var COL = ['    c = 2;', '    for (i = 0; i < N; i++)', '        printf("%d ", a[i][c]);', '    printf("\\n");'];
+    var Pd = prog([head(decl), BL, READ_N, BL, {struck: true, lines: hs}, {lines: ROW}, BL, END]);
+    Rec.put(Pd, Pd.at('r = 1;'), 'The first number stays 1. Only the second one changes. So ~r~ is the row and ~j~ walks along it.', v, W(), {out: out, grp: 'by hand'});
+    var P = prog([head(decl), BL, READ_N, BL, {lines: ROW}, BL, {lines: COL}, BL, END]);
+    out = ''; v.k = {};
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    x.r = 1; v.fixR = 1;
+    put(P.at('r = 1;'), '~r = 1~: we walk row 1.');
+    var Lj = P.at('for (j = 0; j < N; j++)', 'r = 1;');
+    for (var j = 0; ; j++) {
+      var ok = j < N; x.j = j; v.cj = ok ? j : null;
+      put(Lj, loopSay('j', j, j === 0, N), {cond: {ok: ok}, grp: ok ? 'row' : ''});
+      if (!ok) break;
+      out += v.g[1][j] + ' '; v.k[key(1, j)] = 'hit'; v.cur = [1, j];
+      put(P.at('printf("%d ", a[r][j])'), 'Print ~a[1][' + j + ']~ = ' + v.g[1][j] + '.', {grp: 'row'}); v.cur = null;
+    }
+    v.cj = null; out += '\n';
+    put(P.at('printf("\\n")'), 'Row 1 is done.');
+    x.c = 2; v.fixR = null; v.fixC = 2;
+    put(P.at('c = 2;'), 'Now a column: the second number stays 2, and ~i~ walks down.');
+    var Li = P.at('for (i = 0; i < N; i++)', 'c = 2;');
+    for (var i = 0; ; i++) {
+      var ok3 = i < N; x.i = i; v.ci = ok3 ? i : null;
+      put(Li, loopSay('i', i, i === 0, N), {cond: {ok: ok3}, grp: ok3 ? 'column' : ''});
+      if (!ok3) break;
+      out += v.g[i][2] + ' '; v.k[key(i, 2)] = 'seen'; v.cur = [i, 2];
+      put(P.at('printf("%d ", a[i][c])'), 'Print ~a[' + i + '][2]~ = ' + v.g[i][2] + '.', {grp: 'column'}); v.cur = null;
+    }
+    v.ci = null; out += '\n';
+    put(P.at('printf("\\n")', 'printf("%d ", a[i][c])'), 'Column 2 is done.');
+    put(P.at('return 0;'), 'A row: the first index stays. A column: the second index stays.');
+    return {steps: Rec.S, hand: Ph, loop: P};
+  }
+
+  /* steps 2 and 3: a diagonal, by hand and then as a loop */
+  function t2Diag(N, flat, which) {
+    var main = which === 'main', s = main ? 'sum1' : 'sum2';
+    var Rec = recorder(), v = table(N, N, mat(N, N, flat)), x = {i: N, j: N, sum: null}, out = '';
+    var decl = DECL_N(', j, ' + s);
+    var W = function () { return [['N', N], ['i', q(x.i)]].concat(main ? [] : [['j', q(x.j)]]).concat([[s, q(x.sum)]]); };
+    var col = function (r) { return main ? r : N - 1 - r; };
+    var P0 = prog([head(decl), BL, READ_N, BL, {lines: ['    ' + s + ' = 0;']}, BL, END]);
+    Rec.put(P0, P0.at('scanf("%d", &N)'), 'Read ~N = ' + N + '~ and the grid.', v, W());
+    x.sum = 0;
+    Rec.put(P0, P0.at(s + ' = 0;'), '~' + s + ' = 0~.', v, W());
+    var Ph = null, k;
+    for (k = 0; k < N; k++) {
+      var L = ['    ' + s + ' = 0;'];
+      for (var t = 0; t <= k; t++) L.push('    ' + s + ' += a[' + t + '][' + col(t) + '];');
+      Ph = prog([head(decl), BL, READ_N, BL, {lines: L}, BL, END]);
+      x.sum += v.g[k][col(k)]; v.k[key(k, col(k))] = main ? 'hit' : 'seen'; v.cur = [k, col(k)];
+      Rec.put(Ph, Ph.at(s + ' += a[' + k + '][' + col(k) + ']'), 'Add ~a[' + k + '][' + col(k) + ']~ = ' + v.g[k][col(k)] + '. Now ~' + s + ' = ' + x.sum + '~.', v, W(), {grp: 'by hand'});
+    }
+    v.cur = null;
+    var hs = []; for (k = 0; k < N; k++) hs.push('    ' + s + ' += a[' + k + '][' + col(k) + '];');
+    var LOOP = main ? ['    for (i = 0; i < N; i++)', '        sum1 += a[i][i];']
+                    : ['    for (i = 0, j = N - 1; i < N; i++, j--)', '        sum2 += a[i][j];'];
+    var PR = ['    printf("%d\\n", ' + s + ');'];
+    var Pd = prog([head(decl), BL, READ_N, BL, {lines: ['    ' + s + ' = 0;']}, {struck: true, lines: hs}, {lines: LOOP.concat(PR)}, BL, END]);
+    Rec.put(Pd, Pd.at('for (i = 0'), main
+      ? 'The two indices are always the same: 0, 1, 2 … So one variable is enough: ~a[i][i]~.'
+      : 'The first index goes up and the second goes down, like ~i~ and ~j~ in the palindrome.', v, W(), {grp: 'by hand'});
+    var P = prog([head(decl), BL, READ_N, BL, {lines: ['    ' + s + ' = 0;'].concat(LOOP, PR)}, BL, END]);
+    v.k = {}; x.sum = null;
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    x.sum = 0;
+    put(P.at(s + ' = 0;'), 'Now the loop does it. ~' + s + ' = 0~.');
+    var Lf = P.at('for (i = 0'), Lb = P.at(s + ' += a[i]');
+    if (!main) { x.i = 0; x.j = N - 1; v.ci = 0; v.cj = N - 1; put(Lf, '~i = 0~ and ~j = N - 1 = ' + (N - 1) + '~.'); }
+    for (var i = 0; ; i++) {
+      var ok = i < N; x.i = i;
+      if (main) { v.ci = ok ? i : null; v.cj = ok ? i : null; }
+      put(Lf, (main ? loopSay('i', i, i === 0, N) : 'Is ~' + i + ' < ' + N + '~?'), {cond: {ok: ok}, grp: ok ? 'pass ' + (i + 1) : ''});
+      if (!ok) break;
+      var c = col(i);
+      x.sum += v.g[i][c]; v.k[key(i, c)] = main ? 'hit' : 'seen'; v.cur = [i, c];
+      put(Lb, 'Add ~a[' + i + '][' + c + ']~ = ' + v.g[i][c] + '. Now ~' + s + ' = ' + x.sum + '~.', {grp: 'pass ' + (i + 1)});
+      v.cur = null;
+      if (!main) {
+        x.j = N - 2 - i; v.ci = i + 1 < N ? i + 1 : null; v.cj = x.j >= 0 ? x.j : null;
+        put(Lf, '~i++~ and ~j--~. Now ~i = ' + (i + 1) + '~ and ~j = ' + x.j + '~.', {grp: 'pass ' + (i + 1)});
+      }
+    }
+    v.ci = null; v.cj = null;
+    out = x.sum + '\n';
+    put(P.at('printf('), 'Print ~' + s + ' = ' + x.sum + '~.');
+    put(P.at('return 0;'), main ? 'The main diagonal: row = column.' : 'The other diagonal: ~i + j~ is always ~N - 1 = ' + (N - 1) + '~.');
+    return {steps: Rec.S, hand: Ph, loop: P};
+  }
+
+  /* step 4: |sum1 - sum2| (SL 66) */
+  function t2Diff(N, flat) {
+    var Rec = recorder(), v = table(N, N, mat(N, N, flat)), x = {i: N, j: N, s1: null, s2: null, d: null}, out = '';
+    var P = prog([head(DECL_N(', j, sum1, sum2, d')), BL, READ_N, BL,
+      {lines: ['    sum1 = 0;', '    sum2 = 0;', '    for (i = 0; i < N; i++)', '        sum1 += a[i][i];',
+        '    for (i = 0, j = N - 1; i < N; i++, j--)', '        sum2 += a[i][j];', '    d = sum1 - sum2;', '    if (d < 0)', '        d = -d;',
+        '    printf("%d\\n", d);']}, BL, END]);
+    var W = function () { return [['N', N], ['i', q(x.i)], ['j', q(x.j)], ['sum1', q(x.s1)], ['sum2', q(x.s2)], ['d', q(x.d)]]; };
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    put(P.at('scanf("%d", &N)'), 'Read ~N = ' + N + '~ and the grid.');
+    x.s1 = 0; put(P.at('sum1 = 0;'), '~sum1 = 0~.');
+    x.s2 = 0; put(P.at('sum2 = 0;'), '~sum2 = 0~.');
+    var L1 = P.at('for (i = 0; i < N; i++)', 'sum2 = 0;'), i;
+    for (i = 0; ; i++) {
+      var ok = i < N; x.i = i; v.ci = ok ? i : null; v.cj = ok ? i : null;
+      put(L1, loopSay('i', i, i === 0, N), {cond: {ok: ok}, grp: ok ? 'main' : ''});
+      if (!ok) break;
+      x.s1 += v.g[i][i]; v.k[key(i, i)] = 'hit'; v.cur = [i, i];
+      put(P.at('sum1 += a[i][i]'), 'Add ~a[' + i + '][' + i + ']~ = ' + v.g[i][i] + '. ~sum1 = ' + x.s1 + '~.', {grp: 'main'}); v.cur = null;
+    }
+    var L2 = P.at('for (i = 0, j = N - 1;');
+    x.i = 0; x.j = N - 1; v.ci = 0; v.cj = N - 1;
+    put(L2, '~i = 0~ and ~j = ' + (N - 1) + '~.', {grp: 'other'});
+    for (i = 0; ; i++) {
+      var ok2 = i < N;
+      put(L2, 'Is ~' + i + ' < ' + N + '~?', {cond: {ok: ok2}, grp: ok2 ? 'other' : ''});
+      if (!ok2) break;
+      var j = N - 1 - i;
+      x.s2 += v.g[i][j]; v.k[key(i, j)] = v.k[key(i, j)] === 'hit' ? 'both' : 'seen'; v.cur = [i, j];
+      put(P.at('sum2 += a[i][j]'), 'Add ~a[' + i + '][' + j + ']~ = ' + v.g[i][j] + '. ~sum2 = ' + x.s2 + '~.', {grp: 'other'}); v.cur = null;
+      x.i = i + 1; x.j = j - 1; v.ci = i + 1 < N ? i + 1 : null; v.cj = j - 1 >= 0 ? j - 1 : null;
+      put(L2, '~i++~ and ~j--~. Now ~i = ' + x.i + '~ and ~j = ' + x.j + '~.', {grp: 'other'});
+    }
+    v.ci = null; v.cj = null;
+    x.d = x.s1 - x.s2; put(P.at('d = sum1 - sum2;'), '~d = ' + x.s1 + ' - ' + x.s2 + ' = ' + x.d + '~.');
+    var neg = x.d < 0;
+    put(P.at('if (d < 0)'), 'Is ~d < 0~?', {cond: {ok: neg}});
+    if (neg) { x.d = -x.d; put(P.at('d = -d;'), 'Make it positive: ~d = ' + x.d + '~.'); }
+    out = x.d + '\n';
+    put(P.at('printf("%d\\n", d)'), 'Print ' + x.d + '.');
+    put(P.at('return 0;'), 'The difference of the two diagonals is ' + x.d + '.');
+    return Rec.S;
+  }
+
+  /* =================== TAB 3 · THINK OF A TABLE =================== */
+
+  /* step 1: c[i][j] = a[i][j] + b[i][j] */
+  function t3Add(R, C, fa, fb) {
+    var Rec = recorder(), v = {R: R, C: C, A: mat(R, C, fa), B: mat(R, C, fb), Cm: mat(R, C), cur: null, ci: null, cj: null}, out = '', x = {i: R, j: C};
+    var decl = ['int a[10][10], b[10][10], c[10][10];', 'int R, C, i, j;'];
+    var W = function () { return [['R', R], ['C', C], ['i', q(x.i)], ['j', q(x.j)]]; };
+    var P0 = prog([head(decl), BL, READ_AB, BL, END]);
+    Rec.put(P0, P0.at(RC), 'Read ~R~, ~C~, then the grid ~a~, then the grid ~b~.', v, W());
+    var Ph = null, k;
+    for (k = 0; k < C; k++) {
+      var L = []; for (var t = 0; t <= k; t++) L.push('    c[0][' + t + '] = a[0][' + t + '] + b[0][' + t + '];');
+      Ph = prog([head(decl), BL, READ_AB, BL, {lines: L}, BL, END]);
+      v.Cm[0][k] = v.A[0][k] + v.B[0][k]; v.cur = [0, k];
+      Rec.put(Ph, Ph.at('c[0][' + k + ']'), '~c[0][' + k + '] = ' + v.A[0][k] + ' + ' + v.B[0][k] + ' = ' + v.Cm[0][k] + '~.', v, W(), {grp: 'by hand'});
+    }
+    v.cur = null;
+    var hs = []; for (k = 0; k < C; k++) hs.push('    c[0][' + k + '] = a[0][' + k + '] + b[0][' + k + '];');
+    var NEST = ['    for (i = 0; i < R; i++)', '        for (j = 0; j < C; j++)', '            c[i][j] = a[i][j] + b[i][j];'];
+    var Pd = prog([head(decl), BL, READ_AB, BL, {struck: true, lines: hs}, {lines: NEST}, BL, printFold('c', 'R', 'C'), BL, END]);
+    Rec.put(Pd, Pd.at('for (i = 0; i < R; i++)', 'scanf("%d", &b[i][j])'),
+      'All three use the same ~[i][j]~. So it is the read loop, with one line inside.', v, W(), {grp: 'by hand'});
+    var P = prog([head(decl), BL, READ_AB, BL, {lines: NEST}, BL, printFold('c', 'R', 'C'), BL, END]);
+    v.Cm = mat(R, C);
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    var Li = P.at('for (i = 0; i < R; i++)', 'scanf("%d", &b[i][j])'), Lj = P.at('for (j = 0; j < C; j++)', Li), Lc = P.at('c[i][j] = a[i][j] + b[i][j]');
+    put(Li - 1, 'c is empty again. Now the loop fills it.');
+    for (var i = 0; ; i++) {
+      var ok = i < R; x.i = i; v.ci = ok ? i : null; v.cj = null;
+      put(Li, loopSay('i', i, i === 0, R), {cond: {ok: ok}, grp: ok ? 'row ' + i : ''});
+      if (!ok) break;
+      for (var j = 0; ; j++) {
+        var ok2 = j < C; x.j = j; v.cj = ok2 ? j : null;
+        put(Lj, loopSay('j', j, j === 0, C), {cond: {ok: ok2}, grp: 'row ' + i});
+        if (!ok2) break;
+        v.Cm[i][j] = v.A[i][j] + v.B[i][j]; v.cur = [i, j];
+        put(Lc, '~c[' + i + '][' + j + '] = ' + v.A[i][j] + ' + ' + v.B[i][j] + ' = ' + v.Cm[i][j] + '~.', {grp: 'row ' + i}); v.cur = null;
+      }
+    }
+    v.ci = null; v.cj = null;
+    out = tableText(v.Cm);
+    put(P.at('for (i = 0; i < R; i++) {'), 'Print ~c~ as a table.');
+    put(P.at('return 0;'), 'Each box of ~c~ is the sum of the same box in ~a~ and ~b~.');
+    return {steps: Rec.S, hand: Ph, loop: P};
+  }
+
+  /* step 2: the sum of each column — the loops swap, the box stays a[i][j] */
+  function t3ColSum(R, C, flat) {
+    var Rec = recorder(), v = table(R, C, mat(R, C, flat)), out = '', x = {i: R, j: C, sum: null};
+    v.sums = new Array(C).fill(null);
+    var P = prog([head(['int a[10][10], R, C, i, j, sum;']), BL, READ_RC, BL,
+      {lines: ['    for (j = 0; j < C; j++) {', '        sum = 0;', '        for (i = 0; i < R; i++)', '            sum += a[i][j];',
+        '        printf("%d ", sum);', '    }', '    printf("\\n");']}, BL, END]);
+    var W = function () { return [['R', R], ['C', C], ['j', q(x.j)], ['i', q(x.i)], ['sum', q(x.sum)]]; };
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    put(P.at(RC), 'Read ~R~, ~C~ and the grid.');
+    var Lj = P.at('for (j = 0; j < C; j++) {'), Li = P.at('for (i = 0; i < R; i++)', Lj);
+    for (var j = 0; ; j++) {
+      var ok = j < C; x.j = j; v.cj = ok ? j : null; v.ci = null; v.col = ok ? j : null;
+      put(Lj, loopSay('j', j, j === 0, C) + (ok ? ' Column ' + j + '.' : ''), {cond: {ok: ok}, grp: ok ? 'column ' + j : ''});
+      if (!ok) break;
+      x.sum = 0; put(P.at('sum = 0;'), '~sum = 0~: a new column starts from 0.', {grp: 'column ' + j});
+      for (var i = 0; ; i++) {
+        var ok2 = i < R; x.i = i; v.ci = ok2 ? i : null;
+        put(Li, loopSay('i', i, i === 0, R), {cond: {ok: ok2}, grp: 'column ' + j});
+        if (!ok2) break;
+        x.sum += v.g[i][j]; v.k[key(i, j)] = 'hit'; v.cur = [i, j];
+        put(P.at('sum += a[i][j]'), 'Add ~a[' + i + '][' + j + ']~ = ' + v.g[i][j] + '. ~sum = ' + x.sum + '~.', {grp: 'column ' + j}); v.cur = null;
+      }
+      v.ci = null; v.sums[j] = x.sum; out += x.sum + ' ';
+      put(P.at('printf("%d ", sum)'), 'Print the sum of column ' + j + ': ' + x.sum + '.', {grp: 'column ' + j});
+    }
+    v.cj = null; v.col = null; out += '\n';
+    put(P.at('printf("\\n")', '}'), 'All columns are done.');
+    put(P.at('return 0;'), 'The box is still ~a[i][j]~. Only the order of the loops changed.');
+    return Rec.S;
+  }
+
+  /* step 3: transpose — b[j][i] = a[i][j] */
+  function t3Trans(R, C, flat) {
+    var Rec = recorder(), v = {R: R, C: C, A: mat(R, C, flat), B: mat(C, R), cur: null, ci: null, cj: null}, out = '', x = {i: R, j: C};
+    var decl = ['int a[10][10], b[10][10], R, C, i, j;'];
+    var W = function () { return [['R', R], ['C', C], ['i', q(x.i)], ['j', q(x.j)]]; };
+    var P0 = prog([head(decl), BL, READ_RC, BL, END]);
+    Rec.put(P0, P0.at(RC), 'Read ~R = ' + R + '~, ~C = ' + C + '~ and the grid ~a~. ~b~ will have ' + C + ' rows and ' + R + ' columns.', v, W());
+    var Ph = null, k;
+    for (k = 0; k < C; k++) {
+      var L = []; for (var t = 0; t <= k; t++) L.push('    b[' + t + '][0] = a[0][' + t + '];');
+      Ph = prog([head(decl), BL, READ_RC, BL, {lines: L}, BL, END]);
+      v.B[k][0] = v.A[0][k]; v.cur = [0, k];
+      Rec.put(Ph, Ph.at('b[' + k + '][0]'), '~b[' + k + '][0] = a[0][' + k + ']~ = ' + v.A[0][k] + '. Row 0 of ~a~ becomes column 0 of ~b~.', v, W(), {grp: 'by hand'});
+    }
+    v.cur = null;
+    var hs = []; for (k = 0; k < C; k++) hs.push('    b[' + k + '][0] = a[0][' + k + '];');
+    var NEST = ['    for (i = 0; i < R; i++)', '        for (j = 0; j < C; j++)', '            b[j][i] = a[i][j];'];
+    var PB = printFold('b', 'C', 'R');
+    var Pd = prog([head(decl), BL, READ_RC, BL, {struck: true, lines: hs}, {lines: NEST}, BL, PB, BL, END]);
+    Rec.put(Pd, Pd.at('for (i = 0; i < R; i++)', 'scanf("%d", &a[i][j])'), 'The two indices swap places: ~a[i][j]~ goes to ~b[j][i]~.', v, W(), {grp: 'by hand'});
+    var P = prog([head(decl), BL, READ_RC, BL, {lines: NEST}, BL, PB, BL, END]);
+    v.B = mat(C, R);
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    var Li = P.at('for (i = 0; i < R; i++)', 'scanf("%d", &a[i][j])'), Lj = P.at('for (j = 0; j < C; j++)', Li), Lb = P.at('b[j][i] = a[i][j]');
+    put(Li - 1, '~b~ is empty again. Now the loop fills it.');
+    for (var i = 0; ; i++) {
+      var ok = i < R; x.i = i; v.ci = ok ? i : null; v.cj = null;
+      put(Li, loopSay('i', i, i === 0, R), {cond: {ok: ok}, grp: ok ? 'row ' + i : ''});
+      if (!ok) break;
+      for (var j = 0; ; j++) {
+        var ok2 = j < C; x.j = j; v.cj = ok2 ? j : null;
+        put(Lj, loopSay('j', j, j === 0, C), {cond: {ok: ok2}, grp: 'row ' + i});
+        if (!ok2) break;
+        v.B[j][i] = v.A[i][j]; v.cur = [i, j];
+        put(Lb, '~b[' + j + '][' + i + '] = a[' + i + '][' + j + ']~ = ' + v.A[i][j] + '.', {grp: 'row ' + i}); v.cur = null;
+      }
+    }
+    v.ci = null; v.cj = null;
+    out = tableText(v.B);
+    put(P.at('for (i = 0; i < C; i++) {'), 'Print ~b~: ' + C + ' rows and ' + R + ' columns.');
+    put(P.at('return 0;'), 'The rows of ~a~ are now the columns of ~b~.');
+    return {steps: Rec.S, hand: Ph, loop: P};
+  }
+
+  /* =================== TAB 4 · AN ARRAY OF ARRAYS =================== */
+  function rows(R, C, flat) { var v = table(R, C, mat(R, C, flat)); v.res = new Array(R).fill(null); return v; }
+
+  /* step 1: the sum of each row */
+  function t4RowSum(R, C, flat) {
+    var Rec = recorder(), v = rows(R, C, flat), out = '', x = {i: R, j: C, sum: null};
+    var P = prog([head(['int a[10][10], R, C, i, j, sum;']), BL, READ_RC, BL,
+      {lines: ['    for (i = 0; i < R; i++) {', '        sum = 0;', '        for (j = 0; j < C; j++)', '            sum += a[i][j];',
+        '        printf("%d\\n", sum);', '    }']}, BL, END]);
+    var W = function () { return [['R', R], ['C', C], ['i', q(x.i)], ['j', q(x.j)], ['sum', q(x.sum)]]; };
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    put(P.at(RC), 'Read ~R~, ~C~ and the grid: ' + R + ' arrays of ' + C + ' numbers.');
+    var Li = P.at('for (i = 0; i < R; i++) {'), Lj = P.at('for (j = 0; j < C; j++)', Li);
+    for (var i = 0; ; i++) {
+      var ok = i < R; x.i = i; v.ci = ok ? i : null; v.cj = null;
+      put(Li, loopSay('i', i, i === 0, R) + (ok ? ' Take the array ~a[' + i + ']~.' : ''), {cond: {ok: ok}, grp: ok ? 'a[' + i + ']' : ''});
+      if (!ok) break;
+      var g = {grp: 'a[' + i + ']'};
+      x.sum = 0; put(P.at('sum = 0;'), '~sum = 0~: every array starts from 0.', g);
+      for (var j = 0; ; j++) {
+        var ok2 = j < C; x.j = j; v.cj = ok2 ? j : null;
+        put(Lj, loopSay('j', j, j === 0, C), Object.assign({cond: {ok: ok2}}, g));
+        if (!ok2) break;
+        x.sum += v.g[i][j]; v.k[key(i, j)] = 'hit'; v.cur = [i, j];
+        put(P.at('sum += a[i][j]'), 'Add ~a[' + i + '][' + j + ']~ = ' + v.g[i][j] + '. ~sum = ' + x.sum + '~.', g); v.cur = null;
+      }
+      v.cj = null; v.res[i] = 'sum ' + x.sum; out += x.sum + '\n';
+      put(P.at('printf("%d\\n", sum)'), 'Print the sum of ~a[' + i + ']~: ' + x.sum + '.', g);
+    }
+    v.ci = null;
+    put(P.at('return 0;'), 'One sum for each array.');
+    return Rec.S;
+  }
+
+  /* the for line of a two-variable walk: start, test, move */
+  function walk2(put, L, v, x, C, g) {
+    x.j = 0; x.k = C - 1; v.cj = 0; v.ck = C - 1;
+    put(L, '~j = 0~ and ~k = C - 1 = ' + (C - 1) + '~: the two ends of ~a[' + x.i + ']~.', g);
+    return {
+      test: function () { var ok = x.j < x.k; put(L, 'Is ~' + x.j + ' < ' + x.k + '~?' + (ok ? '' : ' No, this array is done.'), Object.assign({cond: {ok: ok}}, g)); return ok; },
+      move: function () { x.j++; x.k--; v.cj = x.j; v.ck = x.k; put(L, '~j++~ and ~k--~. Now ~j = ' + x.j + '~ and ~k = ' + x.k + '~.', g); }
+    };
+  }
+
+  /* step 2: mirror every row (SL 74) */
+  function t4Mirror(R, C, flat) {
+    var Rec = recorder(), v = rows(R, C, flat), out = '', x = {i: R, j: C, k: null, temp: null};
+    var P = prog([head(['int a[10][10], R, C, i, j, k, temp;']), BL, READ_RC, BL,
+      {lines: ['    for (i = 0; i < R; i++)', '        for (j = 0, k = C - 1; j < k; j++, k--) {', '            temp = a[i][j];',
+        '            a[i][j] = a[i][k];', '            a[i][k] = temp;', '        }']}, BL, printFold('a', 'R', 'C'), BL, END]);
+    var W = function () { return [['R', R], ['C', C], ['i', q(x.i)], ['j', q(x.j)], ['k', q(x.k)], ['temp', q(x.temp)]]; };
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    put(P.at(RC), 'Read ~R~, ~C~ and the grid.');
+    var Li = P.at('for (i = 0; i < R; i++)', 'scanf("%d", &a[i][j])'), Lw = P.at('for (j = 0, k = C - 1;');
+    for (var i = 0; ; i++) {
+      var ok = i < R; x.i = i; v.ci = ok ? i : null; v.cj = null; v.ck = null; x.j = null; x.k = null;
+      put(Li, loopSay('i', i, i === 0, R) + (ok ? ' Reverse the array ~a[' + i + ']~.' : ''), {cond: {ok: ok}, grp: ok ? 'a[' + i + ']' : ''});
+      if (!ok) break;
+      var g = {grp: 'a[' + i + ']'}, w = walk2(put, Lw, v, x, C, g);
+      while (w.test()) {
+        var j = x.j, k = x.k;
+        v.k = {}; v.k[key(i, j)] = 'swap'; v.k[key(i, k)] = 'swap';
+        x.temp = v.g[i][j]; put(P.at('temp = a[i][j]'), '~temp = a[' + i + '][' + j + ']~ = ' + x.temp + '.', g);
+        v.g[i][j] = v.g[i][k]; put(P.at('a[i][j] = a[i][k]'), '~a[' + i + '][' + j + '] = a[' + i + '][' + k + ']~ = ' + v.g[i][j] + '.', g);
+        v.g[i][k] = x.temp; put(P.at('a[i][k] = temp'), '~a[' + i + '][' + k + '] = temp~ = ' + x.temp + '.', g);
+        v.k = {};
+        w.move();
+      }
+      v.res[i] = 'reversed';
+    }
+    v.ci = null; v.cj = null; v.ck = null;
+    out = tableText(v.g);
+    put(P.at('for (i = 0; i < R; i++) {'), 'Print the grid.');
+    put(P.at('return 0;'), 'Every row is reversed. It is yesterday\'s reverse, once for each array.');
+    return Rec.S;
+  }
+
+  /* step 3: which rows are palindromes? (SL 77) */
+  function t4Pal(R, C, flat) {
+    var Rec = recorder(), v = rows(R, C, flat), out = '', x = {i: R, j: C, k: null, f: null};
+    var P = prog([head(['int a[10][10], R, C, i, j, k, f;']), BL, READ_RC, BL,
+      {lines: ['    for (i = 0; i < R; i++) {', '        f = 1;', '        for (j = 0, k = C - 1; j < k; j++, k--) {',
+        '            if (a[i][j] != a[i][k]) {', '                f = 0;', '                break;', '            }', '        }',
+        '        if (f == 1)', '            printf("Yes\\n");', '        else', '            printf("No\\n");', '    }']}, BL, END]);
+    var W = function () { return [['R', R], ['C', C], ['i', q(x.i)], ['j', q(x.j)], ['k', q(x.k)], ['f', q(x.f)]]; };
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    put(P.at(RC), 'Read ~R~, ~C~ and the grid.');
+    var Li = P.at('for (i = 0; i < R; i++) {'), Lw = P.at('for (j = 0, k = C - 1;');
+    for (var i = 0; ; i++) {
+      var ok = i < R; x.i = i; v.ci = ok ? i : null; v.cj = null; v.ck = null; x.j = null; x.k = null;
+      put(Li, loopSay('i', i, i === 0, R) + (ok ? ' Check the array ~a[' + i + ']~.' : ''), {cond: {ok: ok}, grp: ok ? 'a[' + i + ']' : ''});
+      if (!ok) break;
+      var g = {grp: 'a[' + i + ']'};
+      x.f = 1; put(P.at('f = 1;'), '~f = 1~ again: a new array, no mismatch yet.', g);
+      var w = walk2(put, Lw, v, x, C, g);
+      while (w.test()) {
+        var j = x.j, k = x.k, ne = v.g[i][j] !== v.g[i][k];
+        v.k[key(i, j)] = ne ? 'bad' : 'hit'; v.k[key(i, k)] = ne ? 'bad' : 'hit';
+        put(P.at('if (a[i][j] != a[i][k])'), 'Is ~a[' + i + '][' + j + '] != a[' + i + '][' + k + ']~? The values are ' + v.g[i][j] + ' and ' + v.g[i][k] + '.', Object.assign({cond: {ok: ne}}, g));
+        if (ne) {
+          x.f = 0; put(P.at('f = 0;'), 'A mismatch: ~f = 0~.', g);
+          put(P.at('break;'), '~break~ leaves only the inner loop. The ~i~ loop goes on.', g);
+          break;
+        }
+        w.move();
+      }
+      var yes = x.f === 1;
+      put(P.at('if (f == 1)'), 'Is ~f == 1~?', Object.assign({cond: {ok: yes}}, g));
+      out += yes ? 'Yes\n' : 'No\n'; v.res[i] = yes ? 'Yes' : 'No';
+      put(P.at(yes ? 'printf("Yes' : 'printf("No'), '~a[' + i + ']~: ' + (yes ? 'Yes' : 'No') + '.', g);
+    }
+    v.ci = null; v.cj = null; v.ck = null;
+    put(P.at('return 0;'), 'One answer for each array. ~f~ was reset to 1 before each one.');
+    return Rec.S;
+  }
+
+  /* step 4 (optional): sort every row — yesterday's selection sort, once per row */
+  function t4Sort(R, C, flat) {
+    var Rec = recorder(), v = rows(R, C, flat), out = '', x = {i: R, j: C, k: null, min: null, temp: null};
+    v.fin = {};
+    var P = prog([head(['int a[10][10], R, C, i, j, k, minIdx, temp;']), BL, READ_RC, BL,
+      {lines: ['    for (i = 0; i < R; i++)', '        for (k = 0; k < C - 1; k++) {', '            minIdx = k;', '            for (j = k + 1; j < C; j++)',
+        '                if (a[i][j] < a[i][minIdx])', '                    minIdx = j;', '            temp = a[i][k];', '            a[i][k] = a[i][minIdx];',
+        '            a[i][minIdx] = temp;', '        }']}, BL, printFold('a', 'R', 'C'), BL, END]);
+    var W = function () { return [['i', q(x.i)], ['k', q(x.k)], ['j', q(x.j)], ['minIdx', q(x.min)], ['temp', q(x.temp)]]; };
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    put(P.at(RC), 'Read ~R~, ~C~ and the grid.');
+    var Li = P.at('for (i = 0; i < R; i++)', 'scanf("%d", &a[i][j])'), Lk = P.at('for (k = 0; k < C - 1; k++)'), Lj = P.at('for (j = k + 1; j < C; j++)');
+    for (var i = 0; ; i++) {
+      var ok = i < R; x.i = i; v.ci = ok ? i : null; v.cj = null; v.ck = null;
+      put(Li, loopSay('i', i, i === 0, R) + (ok ? ' Sort the array ~a[' + i + ']~.' : ''), {cond: {ok: ok}, grp: ok ? 'a[' + i + ']' : ''});
+      if (!ok) break;
+      var g = {grp: 'a[' + i + ']'};
+      for (var k = 0; ; k++) {
+        var ok2 = k < C - 1; x.k = k; v.ck = ok2 ? k : null;
+        put(Lk, loopSay('k', k, k === 0, C - 1), Object.assign({cond: {ok: ok2}}, g));
+        if (!ok2) break;
+        x.min = k; v.min = k; put(P.at('minIdx = k;'), '~minIdx = ' + k + '~.', g);
+        for (var j = k + 1; ; j++) {
+          var ok3 = j < C; x.j = j; v.cj = ok3 ? j : null;
+          put(Lj, (j === k + 1 ? '~j = ' + j + '~.' : '~j++~, so ~j = ' + j + '~.') + ' Is ~' + j + ' < ' + C + '~?', Object.assign({cond: {ok: ok3}}, g));
+          if (!ok3) break;
+          var less = v.g[i][j] < v.g[i][x.min];
+          put(P.at('if (a[i][j] < a[i][minIdx])'), 'Is ~a[' + i + '][' + j + '] < a[' + i + '][' + x.min + ']~? The values are ' + v.g[i][j] + ' and ' + v.g[i][x.min] + '.', Object.assign({cond: {ok: less}}, g));
+          if (less) { x.min = j; v.min = j; put(P.at('minIdx = j;'), '~minIdx = ' + j + '~.', g); }
+        }
+        v.cj = null;
+        x.temp = v.g[i][k]; put(P.at('temp = a[i][k]'), '~temp = a[' + i + '][' + k + ']~ = ' + x.temp + '.', g);
+        v.g[i][k] = v.g[i][x.min]; put(P.at('a[i][k] = a[i][minIdx]'), '~a[' + i + '][' + k + ']~ gets ' + v.g[i][k] + '.', g);
+        v.g[i][x.min] = x.temp; put(P.at('a[i][minIdx] = temp'), '~a[' + i + '][' + x.min + ']~ gets ' + x.temp + '. Box ' + k + ' of this array is final.', g);
+        v.fin[key(i, k)] = 1; v.min = null;
+      }
+      v.fin[key(i, C - 1)] = 1; v.res[i] = 'sorted'; v.ck = null;
+    }
+    v.ci = null;
+    out = tableText(v.g);
+    put(P.at('for (i = 0; i < R; i++) {'), 'Print the grid.');
+    put(P.at('return 0;'), 'Every row is sorted. It is yesterday\'s selection sort, once for each array.');
+    return Rec.S;
+  }
+
+  return {parseList: parseList, parseSize: parseSize, parseGrid: parseGrid, mat: mat,
+    t1Use: t1Use, t1PrintRow: t1PrintRow, t1PrintAll: t1PrintAll, t1PrintNL: t1PrintNL, t1Read: t1Read, t1Print: t1Print, t2RowCol: t2RowCol, t2Diag: t2Diag, t2Diff: t2Diff,
+    t3Add: t3Add, t3ColSum: t3ColSum, t3Trans: t3Trans, t4RowSum: t4RowSum, t4Mirror: t4Mirror, t4Pal: t4Pal, t4Sort: t4Sort};
+})();
+if (typeof module !== 'undefined') module.exports = LOGIC;
+
+</script>
+<script>
+"use strict";
+(function () {
+var $ = function (s, r) { return (r || document).querySelector(s); };
+var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var esc = function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+var fmt = function (s) { return esc(s || '').replace(/~([^~]+)~/g, '<code>$1</code>'); };
+
+/* ---------- syntax colours, the same token classes as the course site ---------- */
+function hl(t) {
+  var code = t, com = '', k = t.indexOf('//');
+  if (k >= 0) { code = t.slice(0, k); com = t.slice(k); }
+  var re = /("(?:[^"\\]|\\.)*")|(#include\s*<[^>]*>)|\b(int|for|while|if|else|return|break)\b|\b(printf|scanf|main)\b|\b(\d+)\b/g;
+  var out = '', last = 0, m;
+  while ((m = re.exec(code))) {
+    out += esc(code.slice(last, m.index));
+    var cls = m[1] ? 's' : (m[2] || m[3]) ? 'k' : m[4] ? 'f' : 'n';
+    out += '<span class="' + cls + '">' + esc(m[0]) + '</span>';
+    last = re.lastIndex;
+  }
+  out += esc(code.slice(last));
+  if (com) out += '<span class="c">' + esc(com) + '</span>';
+  return out;
+}
+function staticCode(text) { return text.split('\n').map(hl).join('\n'); }
+
+/* ---------- drawing ---------- */
+var CELL = {def: ['#fff', '#a5b4fc', '#1e1b4b'], empty: ['#fff', '#cbd5e1', '#cbd5e1', 1], look: ['#fffbeb', '#f59e0b', '#b45309'],
+  hit: ['#ecfdf5', '#34d399', '#047857'], bad: ['#fff1f2', '#fb7185', '#be123c'], dim: ['#f8fafc', '#e2e8f0', '#cbd5e1'],
+  fin: ['#d1fae5', '#059669', '#065f46'], a: ['#eef2ff', '#818cf8', '#3730a3'], b: ['#fff7ed', '#fb923c', '#9a3412'],
+  gone: ['#f1f5f9', '#cbd5e1', '#94a3b8'], swap: ['#fef3c7', '#d97706', '#92400e'], seen: ['#eef2ff', '#a5b4fc', '#3730a3']};
+var CHIP = {i: '#4f46e5', j: '#0284c7', k: '#d97706', min: '#059669'};
+var MONO = 'font-family="Fira Code,ui-monospace,SF Mono,Menlo,Consolas,monospace"';
+var SANS = 'font-family="Inter,-apple-system,Segoe UI,Roboto,sans-serif"';
+function txt(x, y, s, o) {
+  o = o || {};
+  return '<text x="' + x + '" y="' + y + '" ' + (o.sans ? SANS : MONO) + ' font-size="' + (o.fs || 14) + '" font-weight="' + (o.fw || 700) +
+    '" fill="' + (o.fill || '#1e1b4b') + '" text-anchor="' + (o.anchor || 'middle') + '" dominant-baseline="central">' + esc(s) + '</text>';
+}
+function box(x, y, w, val, kind, strike) {
+  var c = CELL[kind || 'def'];
+  var g = '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + w + '" rx="7" fill="' + c[0] + '" stroke="' + c[1] + '" stroke-width="2"' +
+    (c[3] ? ' stroke-dasharray="5 4"' : '') + '/>';
+  if (val !== null && val !== undefined && val !== '') g += txt(x + w / 2, y + w / 2 + 1, val, {fs: Math.round(w * 0.38), fw: 800, fill: c[2]});
+  if (strike) g += '<line x1="' + (x + 7) + '" y1="' + (y + w - 7) + '" x2="' + (x + w - 7) + '" y2="' + (y + 7) + '" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>';
+  return g;
+}
+function idxs(xs, y, from) { return xs.map(function (x, k) { return txt(x, y, (from || 0) + k, {fs: 11, fw: 700, fill: '#94a3b8'}); }).join(''); }
+/* a chip: below the row points up, above the row points down */
+function chip(cx, y, label, kind, down) {
+  var col = CHIP[kind] || '#475569', w = 14 + label.length * 9, h = 22;
+  var tri = down ? 'M' + (cx - 6) + ' ' + (y + h / 2) + ' L' + (cx + 6) + ' ' + (y + h / 2) + ' L' + cx + ' ' + (y + h / 2 + 7) + ' Z'
+                 : 'M' + (cx - 6) + ' ' + (y - h / 2) + ' L' + (cx + 6) + ' ' + (y - h / 2) + ' L' + cx + ' ' + (y - h / 2 - 7) + ' Z';
+  return '<path d="' + tri + '" fill="' + col + '"/><rect x="' + (cx - w / 2) + '" y="' + (y - h / 2) + '" width="' + w + '" height="' + h + '" rx="6" fill="' + col + '"/>' +
+    txt(cx, y + 1, label, {fs: 12, fw: 800, fill: '#fff'});
+}
+/* chips on the same box fan out so both stay visible */
+function chips(list, xOf, y, down) {
+  var by = {}, g = '';
+  list.forEach(function (c) { if (c && c.at !== null && c.at !== undefined) (by[c.at] = by[c.at] || []).push(c); });
+  Object.keys(by).forEach(function (at) {
+    by[at].forEach(function (c, t, arr) { g += chip(xOf(+at) + (t - (arr.length - 1) / 2) * 34, y, c.label, c.kind, down); });
+  });
+  return g;
+}
+function arrow(x1, y1, x2, y2, col) {
+  var a = Math.atan2(y2 - y1, x2 - x1), L = 10;
+  return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + (x2 - Math.cos(a) * 4) + '" y2="' + (y2 - Math.sin(a) * 4) + '" stroke="' + col + '" stroke-width="2.5"/>' +
+    '<path d="M' + x2 + ' ' + y2 + ' L' + (x2 - L * Math.cos(a - .45)) + ' ' + (y2 - L * Math.sin(a - .45)) + ' L' + (x2 - L * Math.cos(a + .45)) + ' ' + (y2 - L * Math.sin(a + .45)) + ' Z" fill="' + col + '"/>';
+}
+function arc(x1, x2, y, h, col, w) {
+  return '<path d="M' + x1 + ' ' + y + ' C' + x1 + ' ' + (y - h) + ' ' + x2 + ' ' + (y - h) + ' ' + x2 + ' ' + y + '" fill="none" stroke="' + col + '" stroke-width="' + (w || 2.5) + '"/>';
+}
+function svg(W, H, g) { return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" style="--W:' + W + 'px" xmlns="http://www.w3.org/2000/svg" role="img">' + g + '</svg>'; }
+var has = function (L, k) { return L && L.indexOf(k) >= 0; };
+function rowX(n, cw, gap, W) { var x0 = (W - (n * cw + (n - 1) * gap)) / 2, xs = []; for (var k = 0; k < n; k++) xs.push(x0 + k * (cw + gap)); return xs; }
+
+/* ---------- one simulator: the course-site frame, our picture and listing ---------- */
+var COPYTXT = {};
+function mount(sel, cfg) {
+  var host = $(sel);
+  host.innerHTML = '<div class="sim">' +
+    '<div class="simhd"><span class="simttl">Simulator</span><span class="simnm">' + esc(cfg.name) + '</span><button class="focusb" type="button">⛶ Focus</button></div>' +
+    '<div class="simbd">' + (cfg.top || '') +
+      '<div class="simrail"></div>' +
+      '<div class="simrow two">' +
+        '<div class="simcol"><div class="simboard"><span class="plate">' + esc(cfg.plate || 'the array') + '</span><div class="simfig"></div></div><div class="simwatch"></div><div class="xtra"></div></div>' +
+        '<div class="simcol"><div class="cttl">' + (cfg.checks ? 'The checks we write' : 'The program <small>· click a folded line to open it</small>') + '</div>' +
+          (cfg.checks ? '<div class="checks"></div>' : '<div class="codewrap"><button class="cpy" type="button">Copy</button><pre class="code lines"></pre></div>') + '</div>' +
+      '</div>' +
+      '<div class="simctl"><button class="btn" data-k="next" type="button">Next ▸</button>' +
+        '<button class="btn ghost sm" data-k="play" data-off="▶ Play" data-on="❙❙ Pause" type="button">▶ Play</button>' +
+        '<button class="btn ghost sm" data-k="back" type="button">◂ Back</button><button class="btn ghost sm" data-k="reset" type="button">Reset</button>' +
+        '<span class="simcnt"></span><span class="simkeys"><kbd>n</kbd> <kbd>b</kbd> <kbd>p</kbd> <kbd>r</kbd></span></div>' +
+      '<div class="simmsg"><span class="smn">1</span><p></p></div>' +
+    '</div></div>';
+  var el = $('.sim', host), fig = $('.simfig', el), xtra = $('.xtra', el), pre = $('pre.code', el), chk = $('.checks', el);
+  var M = {steps: cfg.build(), open: {}, lastProg: null, els: {}, api: null, el: el};
+  var outLines = function () { M.outLines = Math.max(1, Math.max.apply(null, M.steps.map(function (st) { return (st.out || '').split('\n').length - ((st.out || '').slice(-1) === '\n' ? 1 : 0); }))); };
+  outLines();
+
+  function buildCode(P) {
+    var h = '', num = 0;
+    M.els = {};
+    P.blocks.forEach(function (b) {
+      var folded = b.fold && !M.open[b.id];
+      if (folded) {
+        var cnt = b.to - b.from + 1, n1 = num + 1; num += cnt;
+        h += '<div class="cl fold" data-fold="' + b.id + '" data-li="' + b.from + '"><span class="gn">' + (cnt > 1 ? n1 + '–' + num : n1) + '</span>' +
+          '<span class="tx"><b>▸</b> ' + esc(b.fold) + '</span><span></span><span class="pp"></span><span></span></div>';
+        return;
+      }
+      if (b.fold) h += '<div class="fh" data-fold="' + b.id + '">▾ ' + esc(b.fold) + '</div>';
+      for (var li = b.from; li <= b.to; li++) {
+        var L = P.lines[li];
+        h += '<div class="cl' + (L.struck ? ' struck' : '') + '" data-li="' + li + '"><span class="gn">' + (L.struck ? '' : ++num) + '</span>' +
+          '<span class="tx">' + (hl(L.t) || ' ') + '</span>' + (L.tag ? '<span class="tg ' + L.tag + '">' + L.tag + '</span>' : '<span></span>') +
+          '<span class="pp"></span><span></span></div>';
+      }
+    });
+    pre.innerHTML = h;
+    $$('.cl', pre).forEach(function (e) {
+      var li = +e.getAttribute('data-li');
+      if (e.classList.contains('fold')) {
+        var b = P.blocks.filter(function (x) { return x.from === li; })[0];
+        for (var t = b.from; t <= b.to; t++) M.els[t] = e;
+      } else M.els[li] = e;
+    });
+    M.lastProg = P;
+  }
+  function paintCode(st, i) {
+    if (!st.prog) return;
+    if (st.prog !== M.lastProg) buildCode(st.prog);
+    COPYTXT[sel] = st.prog.text();
+    $$('.cl', pre).forEach(function (e) { e.classList.remove('cur', 'simtrue', 'simfalse'); $('.pp', e).textContent = ''; });
+    var visits = new Map();
+    for (var k = 0; k <= i; k++) {
+      var s = M.steps[k];
+      if (s.prog !== st.prog || s.l === null) continue;
+      var e = M.els[s.l]; if (e) visits.set(e, (visits.get(e) || 0) + 1);
+    }
+    visits.forEach(function (c, e) { if (c >= 2) $('.pp', e).textContent = '•'.repeat(Math.min(c, 8)) + (c > 8 ? '+' : ''); });
+    var cur = M.els[st.l];
+    if (cur) {
+      cur.classList.add('cur');
+      if (st.cond) cur.classList.add(st.cond.ok ? 'simtrue' : 'simfalse');
+      if (M.api) M.api.reveal(cur, pre);
+    }
+  }
+  function paintChecks(v) {
+    var n = v.a.length, h = '', half = Math.floor(n / 2);
+    for (var k = 0; k < half; k++) {
+      var on = k < v.list.length, p = n - 1 - k;
+      h += '<div class="' + (on ? '' : 'hid') + (v.cur && v.cur[0] === k ? ' cur' : '') + '">a[' + k + '] == a[' + p + '] ?' +
+        ' <span class="v">' + v.a[k] + ' and ' + v.a[p] + '</span></div>';
+    }
+    var done = v.list.length === half && !v.cur && M.api && M.api.index() === M.steps.length - 1;
+    h += '<div class="stop' + (done ? '' : ' hid') + '">stop' + (n % 2 ? ': a[' + ((n - 1) / 2) + '] has no partner' : '') + '</div>';
+    chk.innerHTML = h;
+  }
+  function render(st, i, api) {
+    M.api = api;
+    fig.innerHTML = cfg.draw(st.view, st);
+    if (cfg.checks) paintChecks(st.view); else paintCode(st, i);
+    var x = '';
+    if (cfg.console) x += '<div class="cons"><div class="ch">Output</div><pre style="height:calc(' + Math.min(M.outLines, 12) + ' * 1.5em + .9rem)">' + esc(st.out || '') + '</pre></div>';
+    if (cfg.extra) x += cfg.extra(st, i, M);
+    xtra.innerHTML = x;
+    xtra.style.display = x ? '' : 'none';
+    api.watch(st.watch || []);
+    api.msg(fmt(st.say));
+  }
+  M.api = Sim.make({el: el, steps: M.steps, render: render, play: cfg.play || 900,
+    group: function (s) { return s.grp || ''; }, name: cfg.name});
+  if (pre) {
+    pre.addEventListener('click', function (e) {
+      var f = e.target.closest('[data-fold]');
+      if (f) { var id = f.getAttribute('data-fold'); M.open[id] = !M.open[id]; M.lastProg = null; reserve(); M.api.go(M.api.index()); return; }
+      var c = e.target.closest('.cl'); if (!c) return;
+      var i = M.api.index(), st = M.steps[i], n = M.steps.length;
+      for (var t = 1; t <= n; t++) {
+        var k = (i + t) % n, s = M.steps[k];
+        if (s.prog === st.prog && s.l !== null && M.els[s.l] === c) { M.api.go(k); return; }
+      }
+    });
+    $('.cpy', el).addEventListener('click', function () {
+      var b = this, t = COPYTXT[sel] || '';
+      var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1200); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, function () { fallback(t); done(); });
+      else { fallback(t); done(); }
+    });
+  }
+  /* the listing grows while lines are written by hand: reserve its tallest shape from step 1,
+     so the buttons under it never move */
+  function reserve() {
+    if (!pre) return;
+    var rows = 0, seen = [];
+    M.steps.forEach(function (s) {
+      if (!s.prog || seen.indexOf(s.prog) >= 0) return;
+      seen.push(s.prog);
+      var r = 0;
+      s.prog.blocks.forEach(function (b) { r += b.fold ? (M.open[b.id] ? b.to - b.from + 2 : 1) : b.to - b.from + 1; });
+      rows = Math.max(rows, r);
+    });
+    pre.style.minHeight = 'min(calc(' + rows + ' * 1.72em + 1.2rem), 64vh, 560px)';
+  }
+  reserve();
+  M.reload = function () { M.steps = cfg.build(); M.lastProg = null; outLines(); reserve(); M.api.setSteps(M.steps); };
+  return M;
+}
+function fallback(t) {
+  var ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta);
+}
+
+
+/* ---------- grids: the table view and the array-of-arrays view ---------- */
+CELL.both = ['#fef3c7', '#d97706', '#92400e'];
+var GAP = 4;
+/* a chip left of a row, pointing right */
+function chipR(x, cy, label, kind) {
+  var col = CHIP[kind] || '#475569', w = 14 + label.length * 9, h = 22;
+  return '<path d="M' + x + ' ' + (cy - 6) + ' L' + x + ' ' + (cy + 6) + ' L' + (x + 7) + ' ' + cy + ' Z" fill="' + col + '"/>' +
+    '<rect x="' + (x - w) + '" y="' + (cy - h / 2) + '" width="' + w + '" height="' + h + '" rx="6" fill="' + col + '"/>' + txt(x - w / 2, cy + 1, label, {fs: 12, fw: 800, fill: '#fff'});
+}
+/* one grid: o = {R, C, x0, y0, cw, val(i,j), kind(i,j), name, click, names} */
+function gridAt(o) {
+  var s = '', cw = o.cw;
+  if (o.name) s += txt(o.x0 - 14, o.y0 - 24, o.name, {fs: 14, fw: 800, anchor: 'end', fill: '#475569'});
+  for (var i = 0; i < o.R; i++) {
+    var y = o.y0 + i * (cw + GAP);
+    if (o.rowLab !== false) s += txt(o.x0 - 10, y + cw / 2, i, {fs: 11, fill: '#94a3b8', anchor: 'end'});
+    for (var j = 0; j < o.C; j++) {
+      var x = o.x0 + j * (cw + GAP), val = o.val(i, j), kind = o.kind ? o.kind(i, j) : 'def';
+      if (val === null || val === undefined) kind = kind === 'def' ? 'empty' : kind;
+      var b = box(x, y, cw, o.names ? null : val, kind);
+      if (o.names) b += txt(x + cw / 2, y + cw / 2 + 1, 'a[' + i + '][' + j + ']', {fs: 14, fw: 700, fill: '#3730a3'});
+      s += o.click ? '<g data-idx="' + i + ',' + j + '" class="clk">' + b + '</g>' : b;
+    }
+  }
+  for (var c = 0; c < o.C; c++) s += txt(o.x0 + c * (cw + GAP) + cw / 2, o.y0 - 9, c, {fs: 11, fill: '#94a3b8'});
+  return s;
+}
+function gridW(C, cw) { return C * (cw + GAP) - GAP; }
+function kindOf(v, i, j) {
+  if (v.cur && v.cur[0] === i && v.cur[1] === j) return 'look';
+  var k = v.k && v.k[i + ',' + j];
+  if (k) return k;
+  if (v.fixR === i || v.fixC === j || v.col === j) return 'a';
+  return 'def';
+}
+/* the table view, with i on the rows and j (and k) on the columns */
+function drawTable(v, cw) {
+  cw = cw || 46;
+  var x0 = 78, y0 = 62, W = x0 + gridW(v.C, cw) + 30, H = y0 + v.R * (cw + GAP) + 8;
+  var s = gridAt({R: v.R, C: v.C, x0: x0, y0: y0, cw: cw,
+    val: function (i, j) { var x = v.g[i][j]; return x === null && v.garbage ? '?' : x; },
+    kind: function (i, j) { var k = kindOf(v, i, j); return v.garbage && v.g[i][j] === null && k === 'def' ? 'dim' : k; }});
+  var cx = function (j) { return x0 + j * (cw + GAP) + cw / 2; };
+  if (v.ci !== null && v.ci !== undefined) s += chipR(x0 - 26, y0 + v.ci * (cw + GAP) + cw / 2, 'i', 'i');
+  s += chips([{at: v.cj, label: 'j', kind: 'j'}, {at: v.ck, label: 'k', kind: 'k'}], cx, y0 - 38, true);
+  if (v.sums) v.sums.forEach(function (sm, j) { if (sm !== null) s += txt(cx(j), H + 10, 'sum ' + sm, {fs: 11, fw: 800, fill: '#047857', sans: true}); });
+  return svg(W, H + (v.sums ? 22 : 0), s);
+}
+/* the array-of-arrays view: every row is its own 1D array */
+function drawRows(v) {
+  var cw = 44, x0 = 112, y0 = 22, rg = 62, C = v.C;
+  var W = x0 + gridW(C, cw) + 100, H = y0 + v.R * (cw + rg) - rg + 56, s = '';
+  var cx = function (j) { return x0 + j * (cw + GAP) + cw / 2; };
+  for (var i = 0; i < v.R; i++) {
+    var y = y0 + i * (cw + rg), on = v.ci === i;
+    s += txt(x0 - 12, y + cw / 2, 'a[' + i + ']', {fs: 14, fw: 800, anchor: 'end', fill: on ? '#4f46e5' : '#475569'});
+    if (on) s += '<rect x="' + (x0 - 6) + '" y="' + (y - 5) + '" width="' + (gridW(C, cw) + 12) + '" height="' + (cw + 9) + '" rx="10" fill="none" stroke="#818cf8" stroke-width="2" stroke-dasharray="6 4"/>';
+    for (var j = 0; j < C; j++) {
+      var kind = kindOf(v, i, j);
+      if (v.fin && v.fin[i + ',' + j]) kind = 'fin';
+      if (on && v.min === j && kind !== 'look') kind = 'hit';
+      s += box(x0 + j * (cw + GAP), y, cw, v.g[i][j], kind);
+      s += txt(cx(j), y + cw + 14, j, {fs: 10, fill: '#94a3b8'});
+    }
+    if (v.res && v.res[i]) s += txt(x0 + gridW(C, cw) + 16, y + cw / 2, v.res[i], {fs: 13, fw: 800, anchor: 'start', sans: true,
+      fill: v.res[i] === 'No' ? '#be123c' : '#047857'});
+    if (on) {
+      s += chipR(x0 - 56, y + cw / 2, 'i', 'i');
+      s += chips([{at: v.cj, label: 'j', kind: 'j'}, {at: v.ck, label: 'k', kind: 'k'}], cx, y + cw + 40);
+    }
+  }
+  return svg(W, H, s);
+}
+/* matrix sum: a + b = c, side by side */
+function drawAdd(v) {
+  var cw = 34, R = v.R, C = v.C, gw = gridW(C, cw), x0 = 70, y0 = 58, sep = 46;
+  var xs = [x0, x0 + gw + sep, x0 + 2 * (gw + sep)], W = xs[2] + gw + 20, H = y0 + R * (cw + GAP) + 6, s = '';
+  var cur = function (i, j) { return v.cur && v.cur[0] === i && v.cur[1] === j; };
+  s += gridAt({R: R, C: C, x0: xs[0], y0: y0, cw: cw, name: 'a', val: function (i, j) { return v.A[i][j]; }, kind: function (i, j) { return cur(i, j) ? 'look' : 'def'; }});
+  s += gridAt({R: R, C: C, x0: xs[1], y0: y0, cw: cw, rowLab: false, name: 'b', val: function (i, j) { return v.B[i][j]; }, kind: function (i, j) { return cur(i, j) ? 'look' : 'def'; }});
+  s += gridAt({R: R, C: C, x0: xs[2], y0: y0, cw: cw, rowLab: false, name: 'c', val: function (i, j) { return v.Cm[i][j]; }, kind: function (i, j) { return cur(i, j) ? 'hit' : (v.Cm[i][j] === null ? 'empty' : 'fin'); }});
+  var my = y0 + R * (cw + GAP) / 2;
+  s += txt(xs[1] - sep / 2 + 4, my, '+', {fs: 24, fw: 800, fill: '#64748b'}) + txt(xs[2] - sep / 2 + 4, my, '=', {fs: 24, fw: 800, fill: '#64748b'});
+  if (v.ci !== null && v.ci !== undefined) s += chipR(x0 - 26, y0 + v.ci * (cw + GAP) + cw / 2, 'i', 'i');
+  s += chips([{at: v.cj, label: 'j', kind: 'j'}], function (j) { return xs[2] + j * (cw + GAP) + cw / 2; }, y0 - 36, true);
+  return svg(W, H, s);
+}
+/* transpose: a (R x C) and b (C x R); the value flies from a[i][j] to b[j][i] */
+function drawTrans(v) {
+  var cw = 38, R = v.R, C = v.C, x0 = 78, y0 = 62, xb = x0 + gridW(C, cw) + 90;
+  var W = xb + gridW(R, cw) + 24, H = y0 + Math.max(R, C) * (cw + GAP) + 6, s = '';
+  var cur = function (i, j) { return v.cur && v.cur[0] === i && v.cur[1] === j; };
+  s += gridAt({R: R, C: C, x0: x0, y0: y0, cw: cw, name: 'a', val: function (i, j) { return v.A[i][j]; }, kind: function (i, j) { return cur(i, j) ? 'look' : 'def'; }});
+  s += gridAt({R: C, C: R, x0: xb, y0: y0, cw: cw, name: 'b', val: function (i, j) { return v.B[i][j]; }, kind: function (i, j) { return v.cur && v.cur[1] === i && v.cur[0] === j ? 'hit' : (v.B[i][j] === null ? 'empty' : 'fin'); }});
+  if (v.cur) {
+    var i = v.cur[0], j = v.cur[1];
+    s += arrow(x0 + gridW(C, cw) + 8, y0 + i * (cw + GAP) + cw / 2, xb + i * (cw + GAP) + 6, y0 + j * (cw + GAP) + cw / 2, '#7c3aed');
+  }
+  if (v.ci !== null && v.ci !== undefined) s += chipR(x0 - 26, y0 + v.ci * (cw + GAP) + cw / 2, 'i', 'i');
+  s += chips([{at: v.cj, label: 'j', kind: 'j'}], function (j) { return x0 + j * (cw + GAP) + cw / 2; }, y0 - 38, true);
+  return svg(W, H, s);
+}
+
+/* ---------- inputs ---------- */
+var IN = {
+  1: {R: 4, C: 5, v: [5, 8, 2, 7, 4, 9, 1, 6, 3, 2, 4, 7, 8, 2, 6, 3, 5, 1, 9, 8]},
+  2: {N: 4, v: [5, 1, 8, 2, 7, 3, 9, 4, 6, 2, 1, 5, 3, 8, 4, 9]},
+  3: {R: 3, C: 4, a: [5, 8, 2, 7, 9, 1, 6, 3, 4, 7, 8, 2], b: [1, 0, 2, 1, 0, 3, 1, 2, 2, 1, 0, 4]},
+  4: {R: 3, C: 4, v: [1, 2, 2, 1, 5, 8, 2, 7, 3, 4, 4, 3]}
+};
+function readTab(t) {
+  var err = function (m) { $('#err-' + t).textContent = m || ''; return !m; };
+  if (t === 2) {
+    var n = LOGIC.parseSize($('#t2-n').value, 3, 6, 'N'); if (n.err) return err(n.err);
+    var g = LOGIC.parseGrid($('#t2-v').value, n.v, n.v, 'values'); if (g.err) return err(g.err);
+    IN[2] = {N: n.v, v: g.v}; return err('');
+  }
+  var r = LOGIC.parseSize($('#t' + t + '-r').value, 1, 6, 'R'); if (r.err) return err(r.err);
+  var c = LOGIC.parseSize($('#t' + t + '-c').value, t === 4 ? 2 : 1, 6, 'C'); if (c.err) return err(c.err);
+  if (t === 3) {
+    var a = LOGIC.parseGrid($('#t3-a').value, r.v, c.v, 'a'); if (a.err) return err(a.err);
+    var b = LOGIC.parseGrid($('#t3-b').value, r.v, c.v, 'b'); if (b.err) return err(b.err);
+    IN[3] = {R: r.v, C: c.v, a: a.v, b: b.v}; return err('');
+  }
+  var v = LOGIC.parseGrid($('#t' + t + '-v').value, r.v, c.v, 'values'); if (v.err) return err(v.err);
+  IN[t] = {R: r.v, C: c.v, v: v.v}; return err('');
+}
+
+/* ---------- the small widgets of tab 1 (no stepping) ---------- */
+var W1 = {pick: null, view: 'table', flat: false};
+function paintNames() {
+  var R = 4, C = 5, cw = 74, x0 = 40, y0 = 30;
+  var s = gridAt({R: R, C: C, x0: x0, y0: y0, cw: cw, names: true, click: true, val: function () { return ''; },
+    kind: function (i, j) { return W1.pick && W1.pick[0] === i && W1.pick[1] === j ? 'look' : 'a'; }});
+  $('#w-names').innerHTML = '<div class="simfig">' + svg(x0 + gridW(C, cw) + 20, y0 + R * (cw + GAP) + 4, s) + '</div>' +
+    '<p class="wmsg">' + (W1.pick ? '<code>a[' + W1.pick[0] + '][' + W1.pick[1] + ']</code>: row ' + W1.pick[0] + ', column ' + W1.pick[1] + '.' : 'Click a box.') + '</p>';
+}
+function paintViews() {
+  var v = {R: IN[1].R, C: IN[1].C, g: LOGIC.mat(IN[1].R, IN[1].C, IN[1].v), k: {}, ci: null};
+  if (W1.vpick) { v.k[W1.vpick[0] + ',' + W1.vpick[1]] = 'look'; if (W1.view === 'rows') v.ci = W1.vpick[0]; }
+  var pic = W1.view === 'table' ? drawTable(v) : drawRows(v);
+  var msg = W1.vpick ? (W1.view === 'table' ? '<code>a[' + W1.vpick[0] + '][' + W1.vpick[1] + ']</code>: row ' + W1.vpick[0] + ', column ' + W1.vpick[1] + '.'
+                                            : '<code>a[' + W1.vpick[0] + '][' + W1.vpick[1] + ']</code>: take the array <code>a[' + W1.vpick[0] + ']</code>, then its box ' + W1.vpick[1] + '.')
+                     : 'Click a box.';
+  $('#w-views').innerHTML = '<div class="vtabs"><button type="button" data-view="table" class="' + (W1.view === 'table' ? 'on' : '') + '">As a table</button>' +
+    '<button type="button" data-view="rows" class="' + (W1.view === 'rows' ? 'on' : '') + '">As an array of arrays</button></div>' +
+    '<div class="simfig vclick">' + pic + '</div><p class="wmsg">' + msg + '</p>';
+}
+/* make the boxes of a drawn picture clickable by position */
+function boxAt(e, el, v, view) {
+  var svgEl = el.querySelector('svg'); if (!svgEl) return null;
+  var pt = svgEl.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  var p = pt.matrixTransform(svgEl.getScreenCTM().inverse());
+  var cw = view === 'table' ? 46 : 44, x0 = view === 'table' ? 78 : 112, y0 = view === 'table' ? 62 : 22, rowStep = view === 'table' ? cw + GAP : cw + 62;
+  var j = Math.floor((p.x - x0) / (cw + GAP)), i = Math.floor((p.y - y0) / rowStep);
+  if (i < 0 || j < 0 || i >= v.R || j >= v.C) return null;
+  if (p.x - x0 - j * (cw + GAP) > cw || p.y - y0 - i * rowStep > cw) return null;
+  return [i, j];
+}
+function paintMem() {
+  var R = IN[1].R, C = IN[1].C, g = LOGIC.mat(R, C, IN[1].v), cw = Math.min(34, Math.floor(700 / (R * C))), lab = 44, W = lab + R * C * cw + 20, H = 40 + R * (cw + 26);
+  var TINT = ['#eef2ff', '#fff7ed', '#ecfdf5', '#fdf2f8', '#f0f9ff', '#fefce8'], LINE = ['#818cf8', '#fb923c', '#34d399', '#f472b6', '#38bdf8', '#facc15'];
+  var s = '';
+  for (var i = 0; i < R; i++) {
+    var tx = W1.flat ? lab + i * C * cw : lab, ty = W1.flat ? 24 : 24 + i * (cw + 26);
+    s += '<g class="memrow" style="transform:translate(' + tx + 'px,' + ty + 'px)">' + txt(C * cw / 2, -10, 'row ' + i, {fs: 11, fw: 800, fill: LINE[i % 6], sans: true});
+    for (var j = 0; j < C; j++) s += '<rect x="' + (j * cw) + '" y="0" width="' + cw + '" height="' + cw + '" fill="' + TINT[i % 6] + '" stroke="' + LINE[i % 6] + '" stroke-width="1.5"/>' +
+      txt(j * cw + cw / 2, cw / 2 + 1, g[i][j], {fs: Math.round(cw * 0.4), fw: 800});
+    s += '</g>';
+  }
+  $('#w-mem').innerHTML = '<div class="simfig">' + svg(W, H, s) + '</div><button class="btn sm" type="button" id="mem-btn">' + (W1.flat ? '⟲ Back to rows' : '▶ Show') + '</button>';
+}
+document.addEventListener('click', function (e) {
+  var n = e.target.closest('#w-names [data-idx]');
+  if (n) { W1.pick = n.getAttribute('data-idx').split(',').map(Number); paintNames(); return; }
+  var vb = e.target.closest('#w-views [data-view]');
+  if (vb) { W1.view = vb.getAttribute('data-view'); paintViews(); return; }
+  var vc = e.target.closest('#w-views .vclick');
+  if (vc) { var p = boxAt(e, vc, {R: IN[1].R, C: IN[1].C}, W1.view); if (p) { W1.vpick = p; paintViews(); } return; }
+  if (e.target.closest('#mem-btn')) {
+    W1.flat = !W1.flat;
+    var rowsEl = $$('#w-mem .memrow'), R = IN[1].R, C = IN[1].C, cw = Math.min(34, Math.floor(700 / (R * C)));
+    rowsEl.forEach(function (g, i) { g.style.transform = 'translate(' + (W1.flat ? 44 + i * C * cw : 44) + 'px,' + (W1.flat ? 24 : 24 + i * (cw + 26)) + 'px)'; });
+    $('#mem-btn').textContent = W1.flat ? '⟲ Back to rows' : '▶ Show';
+  }
+});
+
+/* step 8: four ways to give values at the declaration */
+var INITS = [
+  ['int a[2][3] = {{1, 2, 3}, {4, 5, 6}};', [[1, 2, 3], [4, 5, 6]], 'One { } for each row.'],
+  ['int a[2][3] = {1, 2, 3, 4, 5, 6};', [[1, 2, 3], [4, 5, 6]], 'Row 0 fills first, then row 1.'],
+  ['int a[2][3] = {{1, 2}, {4}};', [[1, 2, 0], [4, 0, 0]], 'The boxes you leave out become 0.'],
+  ['int a[3][4] = {0};', [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], 'A short way to start with all zeros.']
+];
+function paintInit() {
+  $('#w-init').innerHTML = '<div class="inits">' + INITS.map(function (it) {
+    var g = it[1], R = g.length, C = g[0].length, cw = 32, x0 = 26, y0 = 24;
+    var pic = gridAt({R: R, C: C, x0: x0, y0: y0, cw: cw, val: function (i, j) { return g[i][j]; }, kind: function () { return 'def'; }});
+    return '<div class="init"><pre class="code">' + staticCode(it[0]) + '</pre><div class="simfig">' + svg(x0 + gridW(C, cw) + 10, y0 + R * (cw + GAP), pic) + '</div><p>' + it[2] + '</p></div>';
+  }).join('') + '</div>';
+}
+
+/* ---------- the simulators ---------- */
+var S = {};
+var tokens = function (st) {
+  var v = st.view;
+  return '<div class="ch2">Input</div><div class="stream">' + v.toks.map(function (t, k) {
+    return '<span class="' + (k < v.pos ? 'used' : k === v.pos ? 'next' : '') + '">' + t + '</span>';
+  }).join('') + '</div>';
+};
+S.use = mount('#sim-use', {name: 'Use one box', plate: 'a as a table', console: true, build: function () { return LOGIC.t1Use(9); },
+  draw: function (v) { return drawTable(v); }, extra: tokens});
+S.prow = mount('#sim-prow', {name: 'Print one row', plate: 'a as a table', console: true, build: function () { return LOGIC.t1PrintRow(IN[1].R, IN[1].C, IN[1].v); },
+  draw: function (v) { return drawTable(v); }});
+S.pall = mount('#sim-pall', {name: 'Print every row', plate: 'a as a table', console: true, build: function () { return LOGIC.t1PrintAll(IN[1].R, IN[1].C, IN[1].v).steps; },
+  draw: function (v) { return drawTable(v); }});
+S.pnl = mount('#sim-pnl', {name: 'A new line after each number', plate: 'a as a table', console: true, build: function () { return LOGIC.t1PrintNL(IN[1].R, IN[1].C, IN[1].v); },
+  draw: function (v) { return drawTable(v); }});
+S.read = mount('#sim-read', {name: 'Read a 2D array', plate: 'a as a table', build: function () { return LOGIC.t1Read(IN[1].R, IN[1].C, IN[1].v).steps; },
+  draw: function (v) { return drawTable(v); }, extra: tokens});
+S.print = mount('#sim-print', {name: 'Print it as a table', plate: 'a as a table', console: true, build: function () { return LOGIC.t1Print(IN[1].R, IN[1].C, IN[1].v); },
+  draw: function (v) { return drawTable(v); }});
+S.rowcol = mount('#sim-rowcol', {name: 'One row, one column', plate: 'a as a table', console: true, build: function () { return LOGIC.t2RowCol(IN[2].N, IN[2].v).steps; },
+  draw: function (v) { return drawTable(v); }});
+S.main = mount('#sim-main', {name: 'The main diagonal', plate: 'a as a table', console: true, build: function () { return LOGIC.t2Diag(IN[2].N, IN[2].v, 'main').steps; },
+  draw: function (v) { return drawTable(v); }});
+S.anti = mount('#sim-anti', {name: 'The other diagonal', plate: 'a as a table', console: true, build: function () { return LOGIC.t2Diag(IN[2].N, IN[2].v, 'anti').steps; },
+  draw: function (v) { return drawTable(v); }});
+S.diff = mount('#sim-diff', {name: 'Difference of the diagonals', plate: 'a as a table', console: true, build: function () { return LOGIC.t2Diff(IN[2].N, IN[2].v); },
+  draw: function (v) { return drawTable(v); },
+  extra: function () { return legend([['hit', 'main diagonal'], ['seen', 'other diagonal'], ['both', 'on both']]); }});
+S.add = mount('#sim-add', {name: 'Matrix sum', plate: 'a + b = c', console: true, build: function () { return LOGIC.t3Add(IN[3].R, IN[3].C, IN[3].a, IN[3].b).steps; }, draw: drawAdd});
+S.colsum = mount('#sim-colsum', {name: 'Sum of each column', plate: 'a as a table', console: true, build: function () { return LOGIC.t3ColSum(IN[3].R, IN[3].C, IN[3].a); },
+  draw: function (v) { return drawTable(v); }});
+S.trans = mount('#sim-trans', {name: 'Transpose', plate: 'a and b', console: true, build: function () { return LOGIC.t3Trans(IN[3].R, IN[3].C, IN[3].a).steps; }, draw: drawTrans});
+S.rowsum = mount('#sim-rowsum', {name: 'Sum of each row', plate: 'a as an array of arrays', console: true, build: function () { return LOGIC.t4RowSum(IN[4].R, IN[4].C, IN[4].v); }, draw: drawRows});
+S.mirror = mount('#sim-mirror', {name: 'Mirror every row', plate: 'a as an array of arrays', console: true, build: function () { return LOGIC.t4Mirror(IN[4].R, IN[4].C, IN[4].v); }, draw: drawRows});
+S.pal = mount('#sim-pal', {name: 'Palindrome rows', plate: 'a as an array of arrays', console: true, build: function () { return LOGIC.t4Pal(IN[4].R, IN[4].C, IN[4].v); }, draw: drawRows});
+S.sort = mount('#sim-sort', {name: 'Sort every row', plate: 'a as an array of arrays', console: true, build: function () { return LOGIC.t4Sort(IN[4].R, IN[4].C, IN[4].v); }, draw: drawRows});
+function legend(items) {
+  return '<div class="legend">' + items.map(function (it) { var c = CELL[it[0]]; return '<span><i style="background:' + c[0] + ';border-color:' + c[1] + '"></i>' + it[1] + '</span>'; }).join('') + '</div>';
+}
+
+var GROUPS = {1: ['read', 'prow', 'pall', 'pnl', 'print'], 2: ['rowcol', 'main', 'anti', 'diff'], 3: ['add', 'colsum', 'trans'], 4: ['rowsum', 'mirror', 'pal', 'sort']};
+function reloadTab(t) {
+  if (!readTab(t)) return;
+  if (t === 1) { W1.vpick = null; W1.flat = false; paintViews(); paintMem(); }
+  GROUPS[t].forEach(function (k) { S[k].reload(); });
+}
+var deb = function (f) { var tm; return function () { clearTimeout(tm); tm = setTimeout(f, 400); }; };
+[1, 2, 3, 4].forEach(function (t) {
+  $$('#t' + t + ' .inbar input').forEach(function (inp) { inp.addEventListener('input', deb(function () { reloadTab(t); })); });
+});
+$$('.pre[data-g]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var t = +b.getAttribute('data-tab'), p = b.getAttribute('data-g').split('|');
+    if (t === 2) { $('#t2-n').value = p[0]; $('#t2-v').value = p[2]; }
+    else if (t === 3) { $('#t3-r').value = p[0]; $('#t3-c').value = p[1]; $('#t3-a').value = p[2]; $('#t3-b').value = p[3]; }
+    else { $('#t' + t + '-r').value = p[0]; $('#t' + t + '-c').value = p[1]; $('#t' + t + '-v').value = p[2]; }
+    reloadTab(t);
+  });
+});
+
+/* ---------- static code and practice ---------- */
+var SNIP = {
+  blank: 'scanf("«     »", &R, &C);',
+  sum1d: 'sum = 0;\nfor (j = 0; j < n; j++)\n    sum += a[j];',
+  sumrow: 'sum = 0;\nfor (j = 0; j < «C»; j++)\n    sum += a«[i]»[j];'
+};
+$$('pre[data-code]').forEach(function (p) {
+  p.innerHTML = staticCode(SNIP[p.getAttribute('data-code')]).replace(/«/g, '<mark class="chgm">').replace(/»/g, '</mark>');
+});
+$$('.turn .tbtn').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var a = b.parentNode.querySelector('.ta'), on = a.classList.toggle('on');
+    b.textContent = on ? 'Hide the answer' : 'Show the answer';
+  });
+});
+var HR = 'https://www.hackerrank.com/contests/array-problems-1746719397/challenges/', CF = 'https://codeforces.com/group/MWSDmqGsZm/contest/219774/problem/';
+var BEE = 'https://resources.beecrowd.com/repository/UOJ_', CFP = 'https://codeforces.com/problemset/problem/';
+var PR = {
+  61: ['Row Major Order', HR + 'row-major-order', 'HackerRank'], 62: ['Print the Row', HR + 'print-the-row-1', 'HackerRank'],
+  63: ['Print the Column', HR + 'print-the-column', 'HackerRank'], 64: ['Print the Main Diagonal', HR + 'print-the-main-diagonal', 'HackerRank'],
+  65: ['Print the Secondary Diagonal', HR + 'print-the-secondary-diagonal', 'HackerRank'], 66: ['Matrix', CF + 'T', 'Codeforces'],
+  67: ['Column Major Order', HR + 'column-major-order', 'HackerRank'], 68: ['Transpose Matrix', HR + 'transpose-matrix-22-1', 'HackerRank'],
+  69: ['Search In Matrix', CF + 'S', 'Codeforces'], 70: ['Matrix Addition', HR + 'matrix-addition-40', 'HackerRank'],
+  71: ['Sum by Row-Column (use long long)', HR + 'sum-by-row-column', 'HackerRank'], 73: ['Equal or Not!', HR + 'equal-or-not-5', 'HackerRank'],
+  74: ['Mirror Array', CF + 'W', 'Codeforces'], 75: ['Symmetric or Not!', HR + 'symmetric-or-not-2', 'HackerRank'],
+  76: ['Odd Row Sum', HR + 'odd-row-sum', 'HackerRank'], 77: ['Palindromic Rows', HR + 'palindromic-rows', 'HackerRank'],
+  b1181: ['Line in Array', BEE + '1181_en.html', 'beecrowd'], b1182: ['Column in Array', BEE + '1182_en.html', 'beecrowd'],
+  b1183: ['Above the Main Diagonal', BEE + '1183_en.html', 'beecrowd'], b1184: ['Below the Main Diagonal', BEE + '1184_en.html', 'beecrowd'],
+  b1185: ['Above the Secondary Diagonal', BEE + '1185_en.html', 'beecrowd'], b1186: ['Below the Secondary Diagonal', BEE + '1186_en.html', 'beecrowd'],
+  b1187: ['Top Area', BEE + '1187_en.html', 'beecrowd'], b1188: ['Inferior Area', BEE + '1188_en.html', 'beecrowd'],
+  b1189: ['Left Area', BEE + '1189_en.html', 'beecrowd'], b1190: ['Right Area', BEE + '1190_en.html', 'beecrowd'],
+  b1435: ['Square Matrix I', BEE + '1435_en.html', 'beecrowd'], b1478: ['Square Matrix II', BEE + '1478_en.html', 'beecrowd'],
+  b1557: ['Square Matrix III', BEE + '1557_en.html', 'beecrowd'], b1827: ['Square Array IV', BEE + '1827_en.html', 'beecrowd'],
+  c263A: ['Beautiful Matrix', CFP + '263/A', 'Codeforces'], c1772B: ['Matrix Rotation', CFP + '1772/B', 'Codeforces']
+};
+var AHEAD = {b1187: 1, b1188: 1, b1189: 1, b1190: 1, b1435: 1, b1478: 1, b1557: 1, b1827: 1};
+$$('.practice[data-rows]').forEach(function (box) {
+  var h = '<h3>Practice</h3><table class="ptbl"><tr><th>Row (SL)</th><th>Problem</th><th>Judge</th></tr>';
+  box.getAttribute('data-rows').split(',').forEach(function (id) {
+    var p = PR[id], sl = /^\d+$/.test(id) ? id : (AHEAD[id] ? 'ahead' : 'extra');
+    h += '<tr><td>' + sl + '</td><td><a href="' + p[1] + '" target="_blank" rel="noopener">' + p[0] + '</a></td><td>' + p[2] + '</td></tr>';
+  });
+  box.innerHTML = h + '</table><p class="pnote">Numbers are rows of the Array sheet. "extra" and "ahead" problems are not on the sheet. The HackerRank problems are in the course contest: sign in first.</p>';
+});
+
+/* ---------- tabs ---------- */
+function showTab(n) {
+  $$('.tab').forEach(function (t) { t.setAttribute('aria-selected', t.getAttribute('data-tab') === String(n) ? 'true' : 'false'); });
+  $$('.panel').forEach(function (p) { p.hidden = p.id !== 't' + n; });
+  Sim.all().forEach(function (a) { a.pause(); });
+  try { localStorage.setItem('arrays-1112-tab', n); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+$$('.tab').forEach(function (t) { t.addEventListener('click', function () { showTab(t.getAttribute('data-tab')); }); });
+document.addEventListener('keydown', function (e) {
+  var t = document.activeElement;
+  if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (/^[1-4]$/.test(e.key)) showTab(e.key);
+});
+paintNames(); paintViews(); paintMem(); paintInit();
+try { var saved = localStorage.getItem('arrays-1112-tab'); if (saved) showTab(saved); } catch (e) {}
+window.__S = S;
+
+})();
+</script>
+</body>
+</html>
