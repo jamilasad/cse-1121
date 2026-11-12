@@ -405,6 +405,7 @@ main{padding:1.6rem 0 4rem}
 .turn .tq{padding:.8rem .95rem;font-size:.96rem;line-height:1.62}
 .turn .tq p{margin:0 0 .55rem}
 .turn .tq p:last-child{margin:0}
+.turn .tq pre.code,.turn .ta pre.code{margin:0 0 .6rem}
 .turn .hint{font-size:.84rem;color:#7c3aed;font-weight:700}
 .turn .tbtn{appearance:none;font-family:inherit;font-size:.78rem;font-weight:800;border:1.5px solid #a78bfa;background:#fff;color:#6d28d9;
   border-radius:.5rem;padding:.42rem .85rem;cursor:pointer;margin:0 .95rem .9rem}
@@ -506,6 +507,7 @@ table.tbl tr.now td{background:#eef2ff}
 .ptbl th,.ptbl td{border-bottom:1px solid var(--line);padding:.25rem .8rem .25rem 0;text-align:left}
 .ptbl th{font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute)}
 .ptbl td:first-child{font-family:var(--mono);font-weight:800;color:#047857}
+.ptbl td:nth-child(2){font-family:var(--mono);white-space:nowrap}
 .ptbl a{color:#3730a3;font-weight:700}
 .pnote{font-size:.78rem;color:var(--ink-mute);margin:.45rem 0 0}
 footer{color:var(--ink-mute);font-size:.78rem;text-align:center;padding:1rem 0 2rem}
@@ -513,6 +515,14 @@ footer{color:var(--ink-mute);font-size:.78rem;text-align:center;padding:1rem 0 2
 .inbar input.xs{width:3.2rem}
 .inbar input.wide{width:17rem}
 .widget{border:1px solid var(--line);border-radius:.8rem;padding:.7rem .8rem;background:#fcfdff;margin:.4rem 0 .8rem}
+.namewrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:1rem}
+.namewrap .simfig{width:auto;flex:0 1 auto;min-width:0}
+.pickcard{width:11rem;height:8.2rem;border:2px dashed #cbd5e1;border-radius:.9rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;text-align:center}
+.pickcard.on{border:2px solid #f59e0b;background:#fffbeb}
+.pk-name{font-family:var(--mono);font-size:1.5rem;font-weight:800;color:#3730a3}
+.pk-val{font-family:var(--mono);font-size:1.9rem;font-weight:800;color:#b45309;line-height:1.1}
+.pk-rc{font-size:.88rem;font-weight:600;color:var(--ink-soft)}
+.pk-none{font-size:.92rem;font-weight:600;color:var(--ink-mute)}
 .wmsg{margin:.4rem 0 0;font-weight:600;color:var(--ink-soft);text-align:center;min-height:1.6em}
 .vtabs{display:flex;gap:.35rem;justify-content:center;margin-bottom:.5rem}
 .vtabs button{appearance:none;font-family:inherit;font-size:.8rem;font-weight:800;padding:.35rem .8rem;border-radius:.5rem;border:2px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer}
@@ -577,7 +587,7 @@ mark.chgm{background:#422006;color:#fcd34d;border-radius:.2rem;padding:0 .1rem}
 
   <div class="card numbered"><div class="badge">1</div><div class="kicker">Step 1</div>
     <h2>Declare it, and name every box</h2>
-    <p><code>int a[4][5];</code> makes a grid of 4 rows and 5 columns: 20 int boxes. The box <code>a[i][j]</code> is in row <code>i</code> and column <code>j</code>. Click any box.</p>
+    <p><code>int a[4][5];</code> makes a grid of 4 rows and 5 columns: 20 int boxes. The box <code>a[i][j]</code> is in row <code>i</code> and column <code>j</code>. Here the boxes already hold some numbers. Click any number.</p>
     <div class="widget" id="w-names"></div>
     <div class="turn"><div class="th"><b>Your turn</b></div>
       <div class="tq"><p>What is the name of the last box of <code>int a[4][5];</code>?</p></div>
@@ -588,7 +598,7 @@ mark.chgm{background:#422006;color:#fcd34d;border-radius:.2rem;padding:0 .1rem}
 
   <div class="card numbered"><div class="badge">2</div><div class="kicker">Step 2</div>
     <h2>Use one box, like a variable</h2>
-    <p>Each box is one <code>int</code>. You can put a value in it, use it in a sum, read it with <code>scanf</code>, and print it. The input here is <code>9</code>.</p>
+    <p>Each box is one <code>int</code>. You can put a value in it, use it in a sum, and print it.</p>
     <div id="sim-use"></div>
   </div>
 
@@ -607,9 +617,16 @@ mark.chgm{background:#422006;color:#fcd34d;border-radius:.2rem;padding:0 .1rem}
   <div class="card numbered"><div class="badge">4</div><div class="kicker">Step 4</div>
     <h2>Read it: by hand, then a loop, then a loop around the loop</h2>
     <div class="turn"><div class="th"><b>Your turn</b></div>
-      <div class="tq"><p>First we read the size with one <code>scanf</code>:</p><pre class="code" data-code="blank"></pre><p>What goes inside the quotes?</p></div>
+      <div class="tq"><p>For a 1D array we read <code>n</code>: how many boxes we use. Here we declare a big grid, <code>int a[10][10];</code>, and use only a part of it.</p><p>How do we tell the program which part we use?</p></div>
       <button class="tbtn" type="button">Show the answer</button>
-      <div class="ta"><p><code>"%d %d"</code>: one <code>%d</code> for each variable. Later, <code>scanf("%d", &amp;a[i][j])</code> reads one box, so it has one <code>%d</code>.</p></div>
+      <div class="ta"><p>With two numbers: <code>R</code> rows and <code>C</code> columns. We read them first:</p><pre class="code" data-code="rc"></pre>
+        <div class="widget" id="w-area"></div>
+        <p>We use rows 0 to <code>R - 1</code> and columns 0 to <code>C - 1</code>. The other boxes are not used.</p></div>
+    </div>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><pre class="code" data-code="blank"></pre><p>How many <code>%d</code> go inside the quotes: 1 or 2?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>Only 1. <code>a[2][3]</code> is one box: one <code>int</code>. The 2 and the 3 only say where the box is. So it is <code>scanf("%d", &amp;a[2][3]);</code>.</p></div>
     </div>
     <p>Then row 0, one box at a time. Watch what changes.</p>
     <div id="sim-read"></div>
@@ -1412,20 +1429,18 @@ var LOGIC = (function () {
   }
 
   /* step 2: use one box at a time — assign, use, scan, print. Boxes not set yet hold garbage. */
-  function t1Use(inVal) {
+  function t1Use() {
     var Rec = recorder(), v = table(4, 5, mat(4, 5)), out = '';
-    v.garbage = true; v.toks = [inVal]; v.pos = 0; v.cur = null;
-    var P = prog([head(['int a[4][5];']), BL, {lines: ['    a[1][2] = 7;', '    a[3][0] = a[1][2] + 1;', '    scanf("%d", &a[0][4]);',
-      '    printf("%d\\n", a[3][0]);', '    printf("%d\\n", a[0][4] * 2);']}, BL, END]);
+    v.garbage = true; v.cur = null;
+    var P = prog([head(['int a[4][5];']), BL, {lines: ['    a[1][2] = 7;', '    a[3][0] = a[1][2] + 1;',
+      '    printf("%d\\n", a[3][0]);']}, BL, END]);
     var put = function (l, say) { Rec.put(P, l, say, v, [], {out: out}); };
     put(P.at('int a[4][5];'), '~int a[4][5];~ makes 20 boxes. We have not put values in them yet, so they hold garbage (?).');
     v.g[1][2] = 7; v.cur = [1, 2]; put(P.at('a[1][2] = 7;'), 'Put 7 in the box at row 1, column 2.');
     v.g[3][0] = 8; v.cur = [3, 0]; put(P.at('a[3][0] = a[1][2] + 1;'), 'A box works like any int variable: ~a[1][2] + 1~ is 8, and it goes into ~a[3][0]~.');
-    v.g[0][4] = inVal; v.pos = 1; v.cur = [0, 4]; put(P.at('scanf("%d", &a[0][4]);'), 'Read ' + inVal + ' from the input into ~a[0][4]~. The box needs ~&~, like any variable.');
     out += '8\n'; v.cur = [3, 0]; put(P.at('printf("%d\\n", a[3][0]);'), 'Print ~a[3][0]~: 8.');
-    out += (inVal * 2) + '\n'; v.cur = [0, 4]; put(P.at('printf("%d\\n", a[0][4] * 2);'), 'Print ~a[0][4] * 2~: ' + (inVal * 2) + '.');
     v.cur = null;
-    put(P.at('return 0;'), 'Only 3 of the 20 boxes got a value. The other 17 still hold garbage.');
+    put(P.at('return 0;'), 'Only 2 of the 20 boxes got a value. The other 18 still hold garbage.');
     return Rec.S;
   }
 
@@ -1608,7 +1623,7 @@ var LOGIC = (function () {
                     : ['    for (i = 0, j = N - 1; i < N; i++, j--)', '        sum2 += a[i][j];'];
     var PR = ['    printf("%d\\n", ' + s + ');'];
     var Pd = prog([head(decl), BL, READ_N, BL, {lines: ['    ' + s + ' = 0;']}, {struck: true, lines: hs}, {lines: LOOP.concat(PR)}, BL, END]);
-    Rec.put(Pd, Pd.at('for (i = 0'), main
+    Rec.put(Pd, Pd.at('for (i = 0', s + ' = 0;'), main
       ? 'The two indices are always the same: 0, 1, 2 … So one variable is enough: ~a[i][i]~.'
       : 'The first index goes up and the second goes down, like ~i~ and ~j~ in the palindrome.', v, W(), {grp: 'by hand'});
     var P = prog([head(decl), BL, READ_N, BL, {lines: ['    ' + s + ' = 0;'].concat(LOOP, PR)}, BL, END]);
@@ -1616,7 +1631,7 @@ var LOGIC = (function () {
     var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
     x.sum = 0;
     put(P.at(s + ' = 0;'), 'Now the loop does it. ~' + s + ' = 0~.');
-    var Lf = P.at('for (i = 0'), Lb = P.at(s + ' += a[i]');
+    var Lf = P.at('for (i = 0', s + ' = 0;'), Lb = P.at(s + ' += a[i]');
     if (!main) { x.i = 0; x.j = N - 1; v.ci = 0; v.cj = N - 1; put(Lf, '~i = 0~ and ~j = N - 1 = ' + (N - 1) + '~.'); }
     for (var i = 0; ; i++) {
       var ok = i < N; x.i = i;
@@ -2210,6 +2225,7 @@ function gridAt(o) {
       if (val === null || val === undefined) kind = kind === 'def' ? 'empty' : kind;
       var b = box(x, y, cw, o.names ? null : val, kind);
       if (o.names) b += txt(x + cw / 2, y + cw / 2 + 1, 'a[' + i + '][' + j + ']', {fs: 14, fw: 700, fill: '#3730a3'});
+      if (o.corner) b += txt(x + 6, y + 12, 'a[' + i + '][' + j + ']', {fs: 11, fw: 700, fill: '#6366f1', anchor: 'start'});
       s += o.click ? '<g data-idx="' + i + ',' + j + '" class="clk">' + b + '</g>' : b;
     }
   }
@@ -2319,12 +2335,29 @@ function readTab(t) {
 
 /* ---------- the small widgets of tab 1 (no stepping) ---------- */
 var W1 = {pick: null, view: 'table', flat: false};
+var V1 = LOGIC.mat(4, 5, [5, 8, 2, 7, 4, 9, 1, 6, 3, 2, 4, 7, 8, 2, 6, 3, 5, 1, 9, 8]);
 function paintNames() {
-  var R = 4, C = 5, cw = 74, x0 = 40, y0 = 30;
-  var s = gridAt({R: R, C: C, x0: x0, y0: y0, cw: cw, names: true, click: true, val: function () { return ''; },
-    kind: function (i, j) { return W1.pick && W1.pick[0] === i && W1.pick[1] === j ? 'look' : 'a'; }});
-  $('#w-names').innerHTML = '<div class="simfig">' + svg(x0 + gridW(C, cw) + 20, y0 + R * (cw + GAP) + 4, s) + '</div>' +
-    '<p class="wmsg">' + (W1.pick ? '<code>a[' + W1.pick[0] + '][' + W1.pick[1] + ']</code>: row ' + W1.pick[0] + ', column ' + W1.pick[1] + '.' : 'Click a box.') + '</p>';
+  var R = 4, C = 5, cw = 74, x0 = 40, y0 = 30, p = W1.pick;
+  var s = gridAt({R: R, C: C, x0: x0, y0: y0, cw: cw, corner: true, click: true, val: function (i, j) { return V1[i][j]; },
+    kind: function (i, j) { return p && p[0] === i && p[1] === j ? 'look' : 'a'; }});
+  var card = p ? '<div class="pk-name">a[' + p[0] + '][' + p[1] + ']</div><div class="pk-val">= ' + V1[p[0]][p[1]] + '</div>' +
+                 '<div class="pk-rc">row ' + p[0] + ', column ' + p[1] + '</div>'
+               : '<div class="pk-none">Click a number.</div>';
+  $('#w-names').innerHTML = '<div class="namewrap"><div class="simfig">' + svg(x0 + gridW(C, cw) + 20, y0 + R * (cw + GAP) + 4, s) + '</div>' +
+    '<div class="pickcard' + (p ? ' on' : '') + '">' + card + '</div></div>';
+}
+function paintArea() {
+  var R = IN[1].R, C = IN[1].C, cw = 20, g = 3, x0 = 62, y0 = 28, s = '';
+  for (var i = 0; i < 10; i++) for (var j = 0; j < 10; j++) {
+    var used = i < R && j < C;
+    s += '<rect x="' + (x0 + j * (cw + g)) + '" y="' + (y0 + i * (cw + g)) + '" width="' + cw + '" height="' + cw + '" rx="3" fill="' + (used ? '#eef2ff' : '#f8fafc') + '" stroke="' + (used ? '#818cf8' : '#e2e8f0') + '" stroke-width="1.5"/>';
+  }
+  var wU = C * (cw + g) - g, hU = R * (cw + g) - g, side = x0 + 10 * (cw + g) + 12;
+  s += '<rect x="' + (x0 - 3) + '" y="' + (y0 - 3) + '" width="' + (wU + 6) + '" height="' + (hU + 6) + '" rx="5" fill="none" stroke="#4f46e5" stroke-width="2.5"/>';
+  s += txt(x0 + wU / 2, y0 - 14, 'C = ' + C, {fs: 13, fw: 800, fill: '#4f46e5'});
+  s += txt(x0 - 8, y0 + hU / 2, 'R = ' + R, {fs: 13, fw: 800, fill: '#4f46e5', anchor: 'end'});
+  s += txt(side, y0 + 10 * (cw + g) - 10, 'a[10][10]', {fs: 12, fw: 700, fill: '#94a3b8', anchor: 'start'});
+  $('#w-area').innerHTML = '<div class="simfig">' + svg(side + 80, y0 + 10 * (cw + g) + 4, s) + '</div>';
 }
 function paintViews() {
   var v = {R: IN[1].R, C: IN[1].C, g: LOGIC.mat(IN[1].R, IN[1].C, IN[1].v), k: {}, ci: null};
@@ -2399,8 +2432,8 @@ var tokens = function (st) {
     return '<span class="' + (k < v.pos ? 'used' : k === v.pos ? 'next' : '') + '">' + t + '</span>';
   }).join('') + '</div>';
 };
-S.use = mount('#sim-use', {name: 'Use one box', plate: 'a as a table', console: true, build: function () { return LOGIC.t1Use(9); },
-  draw: function (v) { return drawTable(v); }, extra: tokens});
+S.use = mount('#sim-use', {name: 'Use one box', plate: 'a as a table', console: true, build: function () { return LOGIC.t1Use(); },
+  draw: function (v) { return drawTable(v); }});
 S.prow = mount('#sim-prow', {name: 'Print one row', plate: 'a as a table', console: true, build: function () { return LOGIC.t1PrintRow(IN[1].R, IN[1].C, IN[1].v); },
   draw: function (v) { return drawTable(v); }});
 S.pall = mount('#sim-pall', {name: 'Print every row', plate: 'a as a table', console: true, build: function () { return LOGIC.t1PrintAll(IN[1].R, IN[1].C, IN[1].v).steps; },
@@ -2435,7 +2468,7 @@ function legend(items) {
 var GROUPS = {1: ['read', 'prow', 'pall', 'pnl', 'print'], 2: ['rowcol', 'main', 'anti', 'diff'], 3: ['add', 'colsum', 'trans'], 4: ['rowsum', 'mirror', 'pal', 'sort']};
 function reloadTab(t) {
   if (!readTab(t)) return;
-  if (t === 1) { W1.vpick = null; W1.flat = false; paintViews(); paintMem(); }
+  if (t === 1) { W1.vpick = null; W1.flat = false; paintViews(); paintMem(); paintArea(); }
   GROUPS[t].forEach(function (k) { S[k].reload(); });
 }
 var deb = function (f) { var tm; return function () { clearTimeout(tm); tm = setTimeout(f, 400); }; };
@@ -2454,7 +2487,8 @@ $$('.pre[data-g]').forEach(function (b) {
 
 /* ---------- static code and practice ---------- */
 var SNIP = {
-  blank: 'scanf("«     »", &R, &C);',
+  rc: 'scanf("%d %d", &R, &C);',
+  blank: 'scanf("«     »", &a[2][3]);',
   sum1d: 'sum = 0;\nfor (j = 0; j < n; j++)\n    sum += a[j];',
   sumrow: 'sum = 0;\nfor (j = 0; j < «C»; j++)\n    sum += a«[i]»[j];'
 };
@@ -2487,14 +2521,17 @@ var PR = {
   b1557: ['Square Matrix III', BEE + '1557_en.html', 'beecrowd'], b1827: ['Square Array IV', BEE + '1827_en.html', 'beecrowd'],
   c263A: ['Beautiful Matrix', CFP + '263/A', 'Codeforces'], c1772B: ['Matrix Rotation', CFP + '1772/B', 'Codeforces']
 };
+/* tracksheet row of each ARR code (tracksheet/post_mid.py, first row 155) */
+var TROW = {61: 235, 62: 236, 63: 237, 69: 238, 70: 239, 64: 240, 65: 241, 66: 242, 67: 244, 68: 245, 74: 246, 73: 248, 75: 249, 76: 250, 71: 251, 77: 252};
 var AHEAD = {b1187: 1, b1188: 1, b1189: 1, b1190: 1, b1435: 1, b1478: 1, b1557: 1, b1827: 1};
 $$('.practice[data-rows]').forEach(function (box) {
-  var h = '<h3>Practice</h3><table class="ptbl"><tr><th>Row (SL)</th><th>Problem</th><th>Judge</th></tr>';
+  var h = '<h3>Practice</h3><table class="ptbl"><tr><th>Row</th><th>Code</th><th>Problem</th><th>Judge</th></tr>';
   box.getAttribute('data-rows').split(',').forEach(function (id) {
-    var p = PR[id], sl = /^\d+$/.test(id) ? id : (AHEAD[id] ? 'ahead' : 'extra');
-    h += '<tr><td>' + sl + '</td><td><a href="' + p[1] + '" target="_blank" rel="noopener">' + p[0] + '</a></td><td>' + p[2] + '</td></tr>';
+    var p = PR[id], onSheet = /^\d+$/.test(id);
+    var row = onSheet ? TROW[id] : '–', code = onSheet ? 'ARR-' + id : (AHEAD[id] ? 'ahead' : 'extra');
+    h += '<tr><td>' + row + '</td><td>' + code + '</td><td><a href="' + p[1] + '" target="_blank" rel="noopener">' + p[0] + '</a></td><td>' + p[2] + '</td></tr>';
   });
-  box.innerHTML = h + '</table><p class="pnote">Numbers are rows of the Array sheet. "extra" and "ahead" problems are not on the sheet. The HackerRank problems are in the course contest: sign in first.</p>';
+  box.innerHTML = h + '</table><p class="pnote">Row is the row number in your tracksheet. "extra" and "ahead" problems are not in the tracksheet. The HackerRank problems are in the course contest: sign in first.</p>';
 });
 
 /* ---------- tabs ---------- */
@@ -2512,7 +2549,7 @@ document.addEventListener('keydown', function (e) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (/^[1-4]$/.test(e.key)) showTab(e.key);
 });
-paintNames(); paintViews(); paintMem(); paintInit();
+paintNames(); paintViews(); paintMem(); paintInit(); paintArea();
 try { var saved = localStorage.getItem('arrays-1112-tab'); if (saved) showTab(saved); } catch (e) {}
 window.__S = S;
 
