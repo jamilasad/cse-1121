@@ -545,6 +545,20 @@ footer{color:var(--ink-mute);font-size:.78rem;text-align:center;padding:1rem 0 2
 .stream span.next{background:#fffbeb;color:#b45309;outline:1px solid #fcd34d}
 .legend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.78rem;color:var(--ink-soft)}
 .legend i{display:inline-block;width:.9rem;height:.9rem;border:2px solid;border-radius:.2rem;vertical-align:-.12rem;margin-right:.3rem}
+/* tab 5: the terminal pictures */
+.osbar{justify-content:center}
+.oslab{font-size:.8rem;font-weight:800;color:var(--ink-soft)}
+.vtabs.os{margin:0;flex-wrap:wrap}
+.turn.ask{border-color:#7dd3fc;background:linear-gradient(180deg,#f7fcff,#eff9ff)}
+.turn.ask .th{border-bottom-color:#bae6fd}
+.turn.ask .th b{color:#0369a1}
+.runbox{margin:.6rem 0 1rem;border:1px solid var(--line);border-radius:.8rem;background:#fff;padding:.6rem .7rem}
+.runbox .rbbar{display:flex;align-items:center;gap:.7rem;margin-bottom:.45rem}
+.runbox .rbn{font-size:.78rem;color:var(--ink-mute);font-weight:600}
+.ownbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.4rem .6rem;margin-bottom:.5rem;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.ownbar .num{font-family:var(--mono);min-width:1.4rem;text-align:center}
+#w-own .clk{cursor:pointer}
+#t5 .wch .wv{min-width:2.9em}
 mark.chgm{background:#422006;color:#fcd34d;border-radius:.2rem;padding:0 .1rem}
 </style>
 </head>
@@ -558,6 +572,7 @@ mark.chgm{background:#422006;color:#fcd34d;border-radius:.2rem;padding:0 .1rem}
       <button class="tab" role="tab" data-tab="2" aria-selected="false">2 · Rows and diagonals</button>
       <button class="tab" role="tab" data-tab="3" aria-selected="false">3 · Think of a table</button>
       <button class="tab" role="tab" data-tab="4" aria-selected="false">4 · Array of arrays</button>
+      <button class="tab" role="tab" data-tab="5" aria-selected="false">5 · Make it move</button>
     </nav>
   </div>
 </header>
@@ -785,6 +800,7 @@ mark.chgm{background:#422006;color:#fcd34d;border-radius:.2rem;padding:0 .1rem}
     <label for="t4-v">values:</label><input id="t4-v" class="wide" value="1 2 2 1 5 8 2 7 3 4 4 3" autocomplete="off" spellcheck="false">
     <button class="pre" data-tab="4" data-g="3|4|1 2 2 1 5 8 2 7 3 4 4 3">3 × 4</button>
     <button class="pre" data-tab="4" data-g="4|5|1 2 3 2 1 4 4 1 4 4 7 1 9 2 5 2 6 6 6 2">4 × 5</button>
+    <button class="pre" data-tab="4" data-g="3|4|-5 -2 -8 -1 -3 -9 -4 -6 -7 -1 -2 -5">3 × 4, negative</button>
     <p class="note">R from 1 to 6, C from 2 to 6.</p>
     <p class="err" id="err-4"></p>
   </div>
@@ -824,7 +840,30 @@ mark.chgm{background:#422006;color:#fcd34d;border-radius:.2rem;padding:0 .1rem}
     <div id="sim-pal"></div>
   </div>
 
-  <div class="card numbered"><div class="badge">4</div><div class="kicker">Step 4 · optional</div>
+  <div class="card numbered"><div class="badge">4</div><div class="kicker">Step 4</div>
+    <h2>Print the palindromic rows</h2>
+    <p>Now print only the rows that are palindromes, not Yes or No.</p>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>What must change in the code of step 3?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>Only the end. Inside <code>if (f == 1)</code>, print row <code>i</code> with a <code>j</code> loop, then <code>\n</code>. There is no <code>else</code>: other rows print nothing.</p></div>
+    </div>
+    <p>The check is the code of step 3, so it is folded. Click it to open it.</p>
+    <div id="sim-palprint"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">5</div><div class="kicker">Step 5</div>
+    <h2>The largest number in each column</h2>
+    <p>A column is not an array of its own. For column <code>j</code>, the row <code>i</code> walks down and <code>j</code> stays. So here we think of a table, as in tab 3.</p>
+    <div id="sim-colmax"></div>
+    <div class="turn"><div class="th"><b>Your turn</b></div>
+      <div class="tq"><p>Why does <code>max</code> start from <code>a[0][j]</code> and not from 0?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>If every number in a column is negative, 0 would win. But 0 is not in the column. Try the example "3 × 4, negative" at the top.</p></div>
+    </div>
+  </div>
+
+  <div class="card numbered"><div class="badge">6</div><div class="kicker">Step 6 · optional</div>
     <h2>Sort every row</h2>
     <p>Yesterday's selection sort, once for each row. Here <code>i</code> is the row, <code>k</code> is the round, <code>j</code> searches.</p>
     <div id="sim-sort"></div>
@@ -834,12 +873,132 @@ mark.chgm{background:#422006;color:#fcd34d;border-radius:.2rem;padding:0 .1rem}
     <ol>
       <li>Each row <code>a[i]</code> is a 1D array. Yesterday's code works on it.</li>
       <li>Reset what belongs to one row (<code>sum</code>, <code>f</code>) inside the <code>i</code> loop.</li>
+      <li>A column is not an array of its own. For a column, <code>i</code> walks down and <code>j</code> stays.</li>
+      <li>A largest value starts from the first box, not from 0.</li>
     </ol>
   </div>
-  <div class="practice" data-rows="71,76,77,74,b1187,b1188,b1189,b1190,b1435,b1478,b1557,b1827"></div>
+  <div class="practice" data-rows="71,76,77,74,78,b1187,b1188,b1189,b1190,b1435,b1478,b1557,b1827"></div>
+</div>
+<!-- =================================================================== TAB 5 -->
+<div class="panel" id="t5" role="tabpanel" hidden>
+  <div class="inbar osbar">
+    <span class="oslab">Your computer:</span>
+    <div class="vtabs os"><button type="button" data-os="a" class="on">Mac / Linux / Windows Terminal</button><button type="button" data-os="w">Windows (Code::Blocks console)</button></div>
+    <p class="note">Only the top of each program, the line that clears the screen, and the wait change. The simulator is the same for both.</p>
+  </div>
+
+  <div class="card"><div class="kicker">A picture is a 2D array</div>
+    <h2>Make a picture move</h2>
+    <p>This is where we are going. Press Run and watch the two men.</p>
+    <div id="run-5intro"></div>
+    <p>It looks hard, but we will build it in small steps. Sit tight and go along with each step. In the end, the picture lives in a 2D array.</p>
+    <p>Copy any program and run it on your computer. The terminal window must be at least 30 columns wide.</p>
+  </div>
+
+  <div class="card numbered"><div class="badge">1</div><div class="kicker">Step 1</div>
+    <h2>Print a picture</h2>
+    <p>Four <code>printf</code> calls draw the man. The terminal starts writing at the top-left corner.</p>
+    <div id="sim-5pic"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">2</div><div class="kicker">Step 2</div>
+    <h2>Put it anywhere</h2>
+    <p>The terminal is a grid of characters. Columns go to the right and lines go down. Both start at 1.</p>
+    <p><code>gotoxy(x, y)</code> moves the cursor to column <code>x</code>, line <code>y</code>. The next <code>printf</code> writes from there. You do not need to know how it works inside: just call it.</p>
+    <p><code>printf("\033[2J");</code> clears the screen first. Without it, the man is drawn over the text that is already in the window. <code>\033</code> is the Esc character. The terminal reads Esc <code>[2J</code> as an order, not as text to print. <code>gotoxy</code> uses the same idea. On Windows we write <code>system("cls");</code> instead.</p>
+    <div id="sim-5one"></div>
+    <div class="turn ask"><div class="th"><b>What next?</b></div>
+      <div class="tq"><p>Only the first line moved. The other lines are at the left edge again. Why? How do we put every line under the first one?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p><code>\n</code> sends the cursor to column 1 of the next line. So each line needs its own <code>gotoxy(left, top + 1)</code>, <code>gotoxy(left, top + 2)</code> …</p></div>
+    </div>
+    <div id="sim-5each"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">3</div><div class="kicker">Step 3</div>
+    <h2>Make it move</h2>
+    <p>Put the 8 lines in a loop that runs 10 times.</p>
+    <div id="sim-5same"></div>
+    <div class="turn ask"><div class="th"><b>What next?</b></div>
+      <div class="tq"><p>The loop runs 10 times, but the man does not move. How do we move him one column each time?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>Draw him at <code>left + step</code> instead of <code>left</code>. <code>step</code> is 0, 1, 2 …, so the column grows by one. A short wait lets us see each move.</p></div>
+    </div>
+    <div id="sim-5trail"></div>
+    <div id="run-5trail"></div>
+    <p>He leaves a trail. The old stars stay on the screen. So after the wait, we write spaces over him, and then move.</p>
+    <div id="sim-5erase"></div>
+    <div id="run-5erase"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">4</div><div class="kicker">Step 4</div>
+    <h2>Keep the picture in a 2D array</h2>
+    <p>Look at step 3 again. One man needs 8 lines to draw and 8 lines to erase. A second man needs 16 more lines, and a new picture means changing every <code>printf</code>. The code is getting messy.</p>
+    <p>So we keep the picture as data, in a 2D array. Then we write the drawing code only once.</p>
+    <p>Each row of the picture is a row of <code>man</code>. 1 means a star and 0 means a space. Printing it is the nested loop from tab 1.</p>
+    <div class="hintbox">
+      <div class="hh"><b>New · A global variable</b></div>
+      <p><code>man</code> is declared outside <code>main</code>, so every function in the file can use it. This is a global variable.</p>
+      <p>We do this because we have not learned how to pass an array to a function yet.</p>
+    </div>
+    <div id="sim-5arr"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">5</div><div class="kicker">Step 5</div>
+    <h2>A function that draws it at (x, y)</h2>
+    <p><code>drawMan(x, y)</code> draws the man with his top-left corner at column <code>x</code>, line <code>y</code>. Row <code>i</code> of <code>man</code> goes to line <code>y + i</code>. Box <code>j</code> goes to column <code>x + j</code>.</p>
+    <p>There is no <code>\n</code> now: <code>gotoxy</code> starts every row. <code>main</code> calls it with <code>left</code> and <code>top</code>. Inside <code>drawMan</code>, the same numbers are called <code>x</code> and <code>y</code>.</p>
+    <div id="sim-5draw"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">6</div><div class="kicker">Step 6</div>
+    <h2>Erase it, then one function for both</h2>
+    <p><code>eraseMan</code> writes spaces over the man. <code>fflush(stdout)</code> is new. Without <code>\n</code>, <code>printf</code> may keep the stars in memory. <code>fflush</code> puts them on the screen before the wait.</p>
+    <div id="sim-5erasefn"></div>
+    <div class="turn ask"><div class="th"><b>What next?</b></div>
+      <div class="tq"><p><code>drawMan</code> and <code>eraseMan</code> are almost the same. How can one function do both?</p></div>
+      <button class="tbtn" type="button">Show the answer</button>
+      <div class="ta"><p>Give it one more parameter, <code>show</code>. Print a star only when <code>show == 1</code> and the box is 1. Otherwise print a space.</p></div>
+    </div>
+    <div id="sim-5show"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">7</div><div class="kicker">Step 7</div>
+    <h2>Move it, then two of them</h2>
+    <p>The loop of step 3 again, but now each move is 3 short lines: draw, wait, erase.</p>
+    <div id="sim-5move"></div>
+    <div id="run-5move"></div>
+    <p>A second man starts 20 columns to the right and walks left: <code>left + 20 - step</code>. After 9 moves they are face to face.</p>
+    <div id="sim-5two"></div>
+    <div id="run-5two"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">8</div><div class="kicker">Step 8 · optional</div>
+    <h2>Make it a story</h2>
+    <p>Row 4 of <code>man</code> holds a second pair of legs. <code>drawMan</code> takes the legs from row <code>legRow</code> of <code>man</code>. After each move, <code>legRow</code> switches: 3, 4, 3, 4 … So the men walk.</p>
+    <p>A ground line goes under their feet. On the last move we do not erase them, and they say Hi!</p>
+    <div id="sim-5story"></div>
+    <div id="run-5story"></div>
+  </div>
+
+  <div class="card numbered"><div class="badge">9</div><div class="kicker">Step 9</div>
+    <h2>Draw your own picture</h2>
+    <p>Click the boxes to draw. The code of step 7 changes with your picture: only <code>man</code> and the loop sizes change. Then press Run.</p>
+    <div class="widget" id="w-own"></div>
+    <div id="run-5own"></div>
+    <div id="sim-5own"></div>
+  </div>
+
+  <div class="bridge"><div class="kicker">What we learned</div>
+    <ol>
+      <li>The screen is a grid too: column <code>x</code>, line <code>y</code>.</li>
+      <li>Row <code>i</code> of a 2D picture goes to line <code>y + i</code>, and box <code>j</code> goes to column <code>x + j</code>.</li>
+      <li>To move a picture: draw, wait, erase, then draw again one column further.</li>
+    </ol>
+  </div>
 </div>
 </main>
-<footer>Keys in a simulator: <b>n</b> next · <b>b</b> back · <b>p</b> play · <b>r</b> reset · <b>1</b>–<b>4</b> switch the tab.</footer>
+<footer>Keys in a simulator: <b>n</b> next · <b>b</b> back · <b>p</b> play · <b>r</b> reset · <b>1</b>–<b>5</b> switch the tab.</footer>
 
 <script>
 /* ---- the simulator shell, copied from the CSE-2321 course site (assets/sim.js) ---- */
@@ -1936,7 +2095,90 @@ var LOGIC = (function () {
     return Rec.S;
   }
 
-  /* step 4 (optional): sort every row — yesterday's selection sort, once per row */
+  /* step 4: print only the palindromic rows. The check is step 3's, folded. */
+  function t4PalPrint(R, C, flat) {
+    var Rec = recorder(), v = rows(R, C, flat), out = '', x = {i: R, j: C, k: null, f: null};
+    var P = prog([head(['int a[10][10], R, C, i, j, k, f;']), BL, READ_RC, BL,
+      {lines: ['    for (i = 0; i < R; i++) {']},
+      {id: 'check', fold: 'check a[i] as in step 3: f = 1 if it is a palindrome', lines: ['        f = 1;', '        for (j = 0, k = C - 1; j < k; j++, k--) {',
+        '            if (a[i][j] != a[i][k]) {', '                f = 0;', '                break;', '            }', '        }']},
+      {lines: ['        if (f == 1) {', '            for (j = 0; j < C; j++)', '                printf("%d ", a[i][j]);', '            printf("\\n");', '        }', '    }']}, BL, END]);
+    var W = function () { return [['R', R], ['C', C], ['i', q(x.i)], ['j', q(x.j)], ['f', q(x.f)]]; };
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    put(P.at(RC), 'Read ~R~, ~C~ and the grid.');
+    var Li = P.at('for (i = 0; i < R; i++) {'), Lf = P.at('if (f == 1) {'), Lj = P.at('for (j = 0; j < C; j++)', Lf), Lp = P.at('printf("%d ", a[i][j]);', Lf), Ln = P.at('printf("\\n");', Lf);
+    var shown = false;
+    for (var i = 0; ; i++) {
+      var ok = i < R; x.i = i; v.ci = ok ? i : null; v.cj = null; x.j = null;
+      put(Li, loopSay('i', i, i === 0, R) + (ok ? ' Check the array ~a[' + i + ']~.' : ''), {cond: {ok: ok}, grp: ok ? 'a[' + i + ']' : ''});
+      if (!ok) break;
+      var g = {grp: 'a[' + i + ']'}, pal = true;
+      for (var j = 0, k = C - 1; j < k; j++, k--) if (v.g[i][j] !== v.g[i][k]) { pal = false; v.k[key(i, j)] = 'bad'; v.k[key(i, k)] = 'bad'; break; } else { v.k[key(i, j)] = 'hit'; v.k[key(i, k)] = 'hit'; }
+      x.f = pal ? 1 : 0; v.res[i] = pal ? 'Yes' : 'No';
+      put(P.at('f = 1;'), 'The check of step 3: ' + (pal ? 'no mismatch, so ~f = 1~.' : 'a mismatch, so ~f = 0~.'), g);
+      put(Lf, 'Is ~f == 1~?' + (pal ? ' Yes: print this row.' : ' No: skip this row.'), Object.assign({cond: {ok: pal}}, g));
+      if (!pal) continue;
+      if (!shown) {
+        for (var jj = 0; ; jj++) {
+          var okj = jj < C; x.j = jj; v.cj = okj ? jj : null;
+          put(Lj, loopSay('j', jj, jj === 0, C), Object.assign({cond: {ok: okj}}, g));
+          if (!okj) break;
+          out += v.g[i][jj] + ' '; v.cur = [i, jj];
+          put(Lp, 'Print ~a[' + i + '][' + jj + ']~ = ' + v.g[i][jj] + '.', g); v.cur = null;
+        }
+        shown = true;
+      } else {
+        out += v.g[i].join(' ') + ' '; x.j = C;
+        put(Lp, 'The ~j~ loop prints the whole row: ' + v.g[i].join(' ') + '.', g);
+      }
+      v.cj = null; out += '\n';
+      put(Ln, 'The row is printed: a new line.', g);
+    }
+    v.ci = null; v.cj = null;
+    put(P.at('return 0;'), shown ? 'Only the palindromic rows were printed.' : 'No row is a palindrome, so nothing was printed.');
+    return Rec.S;
+  }
+
+  /* step 5: the largest number in each column. A column is not an array of its own: i walks down, j stays. */
+  function t4ColMax(R, C, flat) {
+    var Rec = recorder(), v = table(R, C, mat(R, C, flat)), out = '', x = {i: null, j: null, max: null};
+    v.sums = new Array(C).fill(null); v.sumLab = 'max ';
+    var P = prog([head(['int a[10][10], R, C, i, j, max;']), BL, READ_RC, BL,
+      {lines: ['    for (j = 0; j < C; j++) {', '        max = a[0][j];', '        for (i = 1; i < R; i++)', '            if (a[i][j] > max)', '                max = a[i][j];',
+        '        printf("%d ", max);', '    }', '    printf("\\n");']}, BL, END]);
+    var W = function () { return [['R', R], ['C', C], ['j', q(x.j)], ['i', q(x.i)], ['max', q(x.max)]]; };
+    var put = function (l, say, extra) { Rec.put(P, l, say, v, W(), Object.assign({out: out}, extra || {})); };
+    put(P.at(RC), 'Read ~R~, ~C~ and the grid.');
+    var Lj = P.at('for (j = 0; j < C; j++) {'), Li = P.at('for (i = 1; i < R; i++)'), Lc = P.at('if (a[i][j] > max)'), Lm = P.at('max = a[i][j];');
+    for (var j = 0; ; j++) {
+      var ok = j < C; x.j = j; x.i = null; v.cj = ok ? j : null; v.ci = null; v.col = ok ? j : null;
+      put(Lj, loopSay('j', j, j === 0, C) + (ok ? ' Column ' + j + '.' : ''), {cond: {ok: ok}, grp: ok ? 'column ' + j : ''});
+      if (!ok) break;
+      var g = {grp: 'column ' + j}, best = 0;
+      x.max = v.g[0][j]; v.k[key(0, j)] = 'hit'; v.ci = 0;
+      put(P.at('max = a[0][j];'), '~max = a[0][' + j + ']~ = ' + x.max + ': the first box of the column is the largest so far.', g);
+      for (var i = 1; ; i++) {
+        var ok2 = i < R; x.i = i; v.ci = ok2 ? i : null;
+        put(Li, loopSay('i', i, i === 1, R), Object.assign({cond: {ok: ok2}}, g));
+        if (!ok2) break;
+        var big = v.g[i][j] > x.max; v.cur = [i, j];
+        put(Lc, 'Is ~a[' + i + '][' + j + ']~ = ' + v.g[i][j] + ' greater than ~max~ = ' + x.max + '?', Object.assign({cond: {ok: big}}, g));
+        if (big) {
+          v.k[key(best, j)] = 'seen'; best = i; v.k[key(i, j)] = 'hit'; x.max = v.g[i][j];
+          put(Lm, 'Yes: ~max = ' + x.max + '~.', g);
+        } else v.k[key(i, j)] = 'seen';
+        v.cur = null;
+      }
+      v.ci = null; v.sums[j] = x.max; out += x.max + ' ';
+      put(P.at('printf("%d ", max)'), 'The largest number in column ' + j + ' is ' + x.max + '.', g);
+    }
+    v.cj = null; v.col = null; out += '\n';
+    put(P.at('printf("\\n")', 'printf("%d ", max)'), 'All columns are done.');
+    put(P.at('return 0;'), 'The same loops as the column sums of tab 3. Only the work inside changed.');
+    return Rec.S;
+  }
+
+  /* step 6 (optional): sort every row — yesterday's selection sort, once per row */
   function t4Sort(R, C, flat) {
     var Rec = recorder(), v = rows(R, C, flat), out = '', x = {i: R, j: C, k: null, min: null, temp: null};
     v.fin = {};
@@ -1981,9 +2223,386 @@ var LOGIC = (function () {
     return Rec.S;
   }
 
+  /* =================== TAB 5 · MAKE A PICTURE MOVE ===================
+     These programs print to a terminal. Each builder keeps a small copy of the
+     screen (TW columns × TH lines) and changes it the way the terminal would.
+     v is the version of the code: 'a' (Mac, Linux, Windows Terminal) or 'w' (Windows console).
+     Each builder also records frames: the screen during each wait, then at the end. */
+  var TW = 26, TH = 9;
+  function scr() { var g = []; for (var r = 0; r < TH; r++) g.push(new Array(TW + 1).join(' ')); return {g: g, r: 0, c: 0, hot: []}; }
+  function sPut(S, s) {
+    for (var k = 0; k < s.length; k++) {
+      if (s[k] === '\n') { S.r++; S.c = 0; continue; }
+      if (S.r >= 0 && S.r < TH && S.c >= 0 && S.c < TW) { S.g[S.r] = S.g[S.r].slice(0, S.c) + s[k] + S.g[S.r].slice(S.c + 1); S.hot.push([S.r, S.c]); }
+      S.c++;
+    }
+  }
+  function sGo(S, x, y) { S.c = x - 1; S.r = y - 1; }
+  function sCls(S) { S.g = scr().g; }
+  /* replay the real output of a program: ESC[2J, ESC[y;xH, new lines and characters; \x01 marks a wait */
+  function termRun(out) {
+    var S = scr(), fr = [], k = 0, m;
+    while (k < out.length) {
+      if (out.substr(k, 4) === '\x1b[2J') { sCls(S); k += 4; continue; }
+      m = /^\x1b\[(\d+);(\d+)H/.exec(out.slice(k, k + 12));
+      if (m) { sGo(S, +m[2], +m[1]); k += m[0].length; continue; }
+      if (out[k] === '\x01') { fr.push(S.g.slice()); k++; continue; }
+      sPut(S, out[k]); k++;
+    }
+    fr.push(S.g.slice());
+    return fr;
+  }
+
+  var H5 = {
+    a: ['#include <stdio.h>', '#include <unistd.h>', '', '/* move the cursor to column x, line y (both start at 1) */', 'void gotoxy(int x, int y)', '{',
+      '    printf("\\033[%d;%dH", y, x);', '}'],
+    w: ['#include <stdio.h>', '#include <stdlib.h>', '#include <windows.h>', '', '/* move the cursor to column x, line y (both start at 1) */', 'void gotoxy(int x, int y)', '{',
+      '    COORD pos;', '', '    fflush(stdout);', '    pos.X = x - 1;', '    pos.Y = y - 1;', '    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);', '}']
+  };
+  var CLS5 = {a: 'printf("\\033[2J");   /* clear the screen */', w: 'system("cls");       /* clear the screen */'};
+  var waitL = function (v, ms) { return v === 'w' ? 'Sleep(' + ms + ');' : 'usleep(' + ms * 1000 + ');'; };
+  var waitSay = function (ms) { return 'Wait ' + (ms / 1000) + ' s. The screen stays as it is.'; };
+  var headB = function (v, open) { return {id: 'head', fold: open ? null : 'gotoxy: moves the cursor (' + (v === 'w' ? 'Windows' : 'Mac / Linux') + ')', lines: H5[v]}; };
+  var MAN4 = [[0, 1, 0], [1, 1, 1], [0, 1, 0], [1, 0, 1]];
+  var MAN5 = MAN4.concat([[0, 1, 0]]);
+  var PIC = [' * ', '***', ' * ', '* *'];
+  var picL = function (k) { return 'printf("' + PIC[k] + '\\n");'; };
+  var ind = function (n, L) { var p = new Array(n + 1).join(' '); return L.map(function (s) { return s ? p + s : s; }); };
+  function manB(M, open, notes) {
+    var C = M[0].length, L = ['int man[' + M.length + '][' + C + '] = {'];
+    M.forEach(function (row, i) {
+      var t = '    {' + row.join(', ') + '}' + (i < M.length - 1 ? ',' : '');
+      L.push(notes && notes[i] ? t + (i < M.length - 1 ? '   ' : '    ') + notes[i] : t);
+    });
+    L.push('};');
+    return {id: 'man', fold: open ? null : 'man: the picture, 1 is a star', lines: L};
+  }
+  function drawB(kind, R, C, open) {
+    var L = kind === 2 ? ['/* draw the man with his top-left corner at column x, line y */', 'void drawMan(int x, int y)']
+      : kind === 3 ? ['/* show = 1: draw the man at column x, line y.  show = 0: erase him */', 'void drawMan(int x, int y, int show)']
+      : ['/* show = 1: draw the man at column x, line y.  show = 0: erase him.', '   legs: which row of man to use for the legs (3 or 4) */', 'void drawMan(int x, int y, int show, int legs)'];
+    L = L.concat(['{', '    int i, j' + (kind === 4 ? ', r' : '') + ';', '', '    for (i = 0; i < ' + R + '; i++) {']);
+    if (kind === 4) L = L.concat(['        r = i;', '        if (i == 3)', '            r = legs;']);
+    L = L.concat(['        gotoxy(x, y + i);', '        for (j = 0; j < ' + C + '; j++) {',
+      '            if (' + (kind === 2 ? '' : 'show == 1 && ') + 'man[' + (kind === 4 ? 'r' : 'i') + '][j] == 1)',
+      '                printf("*");', '            else', '                printf(" ");', '        }', '    }', '}']);
+    return {id: 'draw', fold: open ? null : 'drawMan: draws or erases the man at (x, y)', lines: L};
+  }
+  var ERASE_B = {id: 'erase', lines: ['/* write spaces over the man at column x, line y */', 'void eraseMan(int x, int y)', '{', '    int i, j;', '',
+    '    for (i = 0; i < 4; i++) {', '        gotoxy(x, y + i);', '        for (j = 0; j < 3; j++)', '            printf(" ");', '    }', '}']};
+  var mainB = function (L) { return {id: 'main', lines: ['int main()', '{'].concat(ind(4, L))}; };
+
+  /* one recorder plus the screen */
+  function ctx() {
+    var c = {Rec: recorder(), S: scr(), man: null, mi: null, mrow: null, frames: [], w: [], grp: '', names: null};
+    /* c.names keeps the same variables on show for the whole run (– when a variable does not exist now),
+       so the panel under the drawing never changes size */
+    c.put = function (P, l, say, ex) {
+      var view = {g: c.S.g.slice(), r: c.S.r, c: c.S.c, hot: c.S.hot.slice(), man: c.man, mi: c.mi, mrow: c.mrow};
+      var w = c.names ? c.names.map(function (n) { var f = c.w.filter(function (p) { return p[0] === n; })[0]; return [n, f ? f[1] : '–']; }) : c.w;
+      c.Rec.put(P, l, say, view, w, Object.assign({grp: c.grp}, ex || {}));
+      c.S.hot = [];
+    };
+    c.wait = function (ms) { c.frames.push({g: c.S.g.slice(), ms: ms}); };
+    c.end = function () { c.frames.push({g: c.S.g.slice(), ms: 0}); var S = c.Rec.S; S.frames = c.frames; return S; };
+    return c;
+  }
+  var rowText = function (M, r, on) { return M[r].map(function (b) { return on && b === 1 ? '*' : ' '; }).join(''); };
+
+  /* run drawMan (kind 2, 3, 4) or eraseMan (kind 'e') once.
+     o.mode: 'call' = one step at the call; 'row0' = step inside, row 0 box by box, the other rows one step each */
+  function drawRun(c, P, o) {
+    var M = c.man, er = o.kind === 'e', k4 = o.kind === 4, Rn = (er || k4) ? 4 : M.length, C = M[0].length;
+    var on = !er && o.show !== 0, name = er ? 'eraseMan' : 'drawMan';
+    var args = o.x + ', ' + o.y + (o.kind === 3 || k4 ? ', ' + o.show : '') + (k4 ? ', ' + o.legs : '');
+    var rowOf = function (i) { return k4 && i === 3 ? o.legs : i; };
+    if (o.mode === 'call') {
+      for (var t = 0; t < Rn; t++) { sGo(c.S, o.x, o.y + t); sPut(c.S, er ? '   ' : rowText(M, rowOf(t), on)); }
+      c.w = o.W(); c.put(P, o.at, o.say);
+      return;
+    }
+    var fh = P.at(er ? 'void eraseMan' : 'void drawMan');
+    var Lf = P.at('for (i = 0;', fh), Lg = P.at('gotoxy(x, y + i);', fh), Lj = P.at('for (j = 0;', fh), Lsp = P.at('printf(" ");', fh);
+    var Lc = er ? null : P.at('if (', Lj), Ls = er ? null : P.at('printf("*");', fh);
+    var Lr = k4 ? P.at('r = i;', fh) : null, L3 = k4 ? P.at('if (i == 3)', fh) : null, Ll = k4 ? P.at('r = legs;', fh) : null;
+    var x = {i: null, j: null, r: null};
+    var W = function () {
+      var w = o.W().concat([['x', o.x], ['y', o.y]]);
+      if (o.kind === 3 || k4) w.push(['show', o.show]);
+      if (k4) w.push(['legs', o.legs]);
+      w.push(['i', q(x.i)], ['j', q(x.j)]);
+      if (k4) w.push(['r', q(x.r)]);
+      return w;
+    };
+    var put = function (l, say, ex) { c.w = W(); c.put(P, l, say, ex); };
+    c.w = o.W(); c.put(P, o.at, 'Call ~' + name + '(' + args + ')~. Inside it, ~x = ' + o.x + '~ and ~y = ' + o.y + '~.');
+    for (var i = 0; ; i++) {
+      var ok = i < Rn; x.i = i; x.j = null;
+      put(Lf, loopSay('i', i, i === 0, Rn), {cond: {ok: ok}});
+      if (!ok) break;
+      var r = i;
+      if (k4) {
+        x.r = i; put(Lr, '~r = ' + i + '~: the row of ~man~ to draw.');
+        put(L3, 'Is ~i == 3~? ' + (i === 3 ? 'Yes: this is the legs line.' : 'No.'), {cond: {ok: i === 3}});
+        if (i === 3) { r = o.legs; x.r = r; put(Ll, '~r = legs = ' + r + '~: the legs come from row ' + r + ' of ~man~.'); }
+      }
+      sGo(c.S, o.x, o.y + i);
+      put(Lg, 'Move the cursor to column ~x = ' + o.x + '~, line ~y + i = ' + (o.y + i) + '~.');
+      c.mrow = er ? null : r;
+      if (i === 0) {
+        for (var j = 0; ; j++) {
+          var okj = j < C; x.j = j;
+          put(Lj, loopSay('j', j, j === 0, C), {cond: {ok: okj}});
+          if (!okj) break;
+          if (er) { sPut(c.S, ' '); put(Lsp, 'Write a space at column ' + (o.x + j) + '.'); continue; }
+          var star = on && M[r][j] === 1, b = '~man[' + r + '][' + j + ']~ is ' + M[r][j];
+          c.mi = [r, j];
+          put(Lc, o.kind === 2 ? b + (star ? ', so we print a star.' : ', so we print a space.')
+            : (o.show === 0 ? '~show~ is 0, so we print a space.' : b + (star ? ' and ~show~ is 1: print a star.' : ': print a space.')), {cond: {ok: star}});
+          sPut(c.S, star ? '*' : ' ');
+          put(star ? Ls : Lsp, (star ? 'A star' : 'A space') + ' at column ~x + j = ' + (o.x + j) + '~.');
+        }
+        c.mi = null;
+      } else {
+        var tx = er ? '   ' : rowText(M, r, on);
+        sPut(c.S, tx); x.j = C;
+        put(er ? Lsp : Lc, er ? 'Write ' + C + ' spaces on line ' + (o.y + i) + '.'
+          : (on ? 'Row ' + r + ' of ~man~ gives ~"' + tx + '"~ on line ' + (o.y + i) + '.' : '~show~ is 0: ' + C + ' spaces on line ' + (o.y + i) + '.'));
+      }
+      c.mrow = null;
+    }
+  }
+
+  /* version 01 · four printf */
+  function t5Pic() {
+    var c = ctx(), P = prog([{lines: ['#include <stdio.h>']}, BL, mainB(PIC.map(function (p, k) { return picL(k); })), END]);
+    var at = P.at('int main()');
+    PIC.forEach(function (p, k) {
+      sPut(c.S, p + '\n'); at = P.at(picL(k), at);
+      c.put(P, at, 'Print ~"' + p + '"~, then ~\\n~: the cursor goes to the start of line ' + (k + 2) + '.');
+    });
+    c.put(P, P.at('return 0;'), 'The picture is always at the top-left: line 1, column 1.');
+    return c.end();
+  }
+  /* version 02 · one gotoxy;  version 03 · one gotoxy for each line */
+  function t5Goto(v, each) {
+    var c = ctx(), L = ['int left = 10, top = 3;', '', CLS5[v]];
+    PIC.forEach(function (p, k) { if (each || k === 0) L.push('gotoxy(left, ' + (k ? 'top + ' + k : 'top') + ');'); L.push(picL(k)); });
+    var P = prog([headB(v, !each), BL, mainB(L), END]);
+    c.w = [['left', 10], ['top', 3]];
+    c.put(P, P.at('int left'), '~left = 10~ and ~top = 3~: where the man should start.');
+    sCls(c.S); c.put(P, P.at(CLS5[v]), 'Clear the screen.');
+    var at = P.at(CLS5[v]);
+    PIC.forEach(function (p, k) {
+      if (each || k === 0) {
+        sGo(c.S, 10, 3 + k);
+        at = P.at('gotoxy(left, ' + (k ? 'top + ' + k : 'top') + ');', at);
+        c.put(P, at, 'Move the cursor to column 10, line ' + (3 + k) + '.');
+      }
+      var col = c.S.c + 1;
+      sPut(c.S, p + '\n'); at = P.at(picL(k), at);
+      c.put(P, at, 'Print ~"' + p + '"~ at column ' + col + '. Then ~\\n~ sends the cursor to column 1 of the next line.');
+    });
+    c.put(P, P.at('return 0;'), each ? 'Every line starts at column 10 now.' : 'Only the first line is at column 10. The other lines start at column 1.');
+    return c.end();
+  }
+  /* versions 04, 05a, 05 · the 8 lines in a loop */
+  function t5Loop(v, move, wait, erase) {
+    var c = ctx(), X = move ? 'left + step' : 'left', body = [];
+    PIC.forEach(function (p, k) { body.push('gotoxy(' + X + ', ' + (k ? 'top + ' + k : 'top') + ');', picL(k)); });
+    if (wait) body.push(waitL(v, 300));
+    if (erase) PIC.forEach(function (p, k) { body.push('gotoxy(' + X + ', ' + (k ? 'top + ' + k : 'top') + ');', 'printf("   \\n");'); });
+    var P = prog([headB(v, false), BL, mainB(['int left = 10, top = 3, step;', '', CLS5[v], 'for (step = 0; step < 10; step++) {'].concat(ind(4, body), ['}'])), END]);
+    var st = null, W = function () { return [['left', 10], ['top', 3], ['step', q(st)]]; };
+    var put = function (l, say, ex) { c.w = W(); c.put(P, l, say, ex); };
+    put(P.at('int left'), '~left = 10~, ~top = 3~.');
+    sCls(c.S); put(P.at(CLS5[v]), 'Clear the screen.');
+    var Lf = P.at('for (step'), Lw = wait ? P.at(waitL(v, 300)) : null;
+    var drawL = P.at(picL(3)), eraseL = erase ? P.lines.map(function (l) { return l.t.trim(); }).lastIndexOf('printf("   \\n");') : null;
+    for (var s = 0; ; s++) {
+      st = s; var ok = s < 10, col = 10 + (move ? s : 0);
+      c.grp = ok ? 'pass ' + (s + 1) : '';
+      put(Lf, loopSay('step', s, s === 0, 10), {cond: {ok: ok}});
+      if (!ok) break;
+      if (s === 0) {
+        var at = Lf;
+        PIC.forEach(function (p, k) {
+          sGo(c.S, col, 3 + k); at = P.at('gotoxy(', at); put(at, 'Move the cursor to column ' + col + ', line ' + (3 + k) + '.');
+          sPut(c.S, p + '\n'); at = P.at(picL(k), at); put(at, 'Print ~"' + p + '"~.');
+        });
+      } else {
+        PIC.forEach(function (p, k) { sGo(c.S, col, 3 + k); sPut(c.S, p + '\n'); });
+        put(drawL, move ? 'The 8 lines draw him at column ' + col + '.' : 'The 8 lines run again. He is drawn at the same place, column 10.');
+      }
+      if (wait) { c.wait(300); put(Lw, waitSay(300)); }
+      if (erase) {
+        if (s === 0) {
+          var e = Lw;
+          for (var k = 0; k < 4; k++) {
+            sGo(c.S, col, 3 + k); e = P.at('gotoxy(', e); put(e, 'Move to column ' + col + ', line ' + (3 + k) + '.');
+            sPut(c.S, '   \n'); e = P.at('printf("   \\n");', e); put(e, 'Write 3 spaces over this line of the man.');
+          }
+        } else {
+          for (var k2 = 0; k2 < 4; k2++) { sGo(c.S, col, 3 + k2); sPut(c.S, '   \n'); }
+          put(eraseL, 'Erase him: spaces over his 4 lines.');
+        }
+      }
+    }
+    c.grp = '';
+    put(P.at('return 0;'), !move ? 'The loop ran 10 times, but nothing moved. Every pass drew him at column 10.'
+      : erase ? 'He moved from column 10 to column 19. The last erase leaves the screen empty.' : 'He moved, but he left a trail: the old stars are still there.');
+    return c.end();
+  }
+  /* version 06 · print the man from the 2D array */
+  function t5Arr(v) {
+    var c = ctx(); c.man = MAN4;
+    var P = prog([headB(v, false), BL, manB(MAN4, true), BL,
+      mainB(['int i, j;', '', 'for (i = 0; i < 4; i++) {', '    for (j = 0; j < 3; j++) {', '        if (man[i][j] == 1)', '            printf("*");', '        else',
+        '            printf(" ");', '    }', '    printf("\\n");', '}']), END]);
+    var m0 = P.at('int main()'), Lf = P.at('for (i = 0;', m0), Lj = P.at('for (j = 0;', m0), Lc = P.at('if (man', m0), Ls = P.at('printf("*");', m0), Lsp = P.at('printf(" ");', m0), Ln = P.at('printf("\\n");', m0);
+    var x = {i: null, j: null}, W = function () { return [['i', q(x.i)], ['j', q(x.j)]]; };
+    var put = function (l, say, ex) { c.w = W(); c.put(P, l, say, ex); };
+    for (var i = 0; ; i++) {
+      var ok = i < 4; x.i = i; x.j = null; c.grp = ok ? 'row ' + i : '';
+      put(Lf, loopSay('i', i, i === 0, 4), {cond: {ok: ok}});
+      if (!ok) break;
+      c.mrow = i;
+      if (i === 0) {
+        for (var j = 0; ; j++) {
+          var okj = j < 3; x.j = j;
+          put(Lj, loopSay('j', j, j === 0, 3), {cond: {ok: okj}});
+          if (!okj) break;
+          var star = MAN4[i][j] === 1; c.mi = [i, j];
+          put(Lc, '~man[' + i + '][' + j + ']~ is ' + MAN4[i][j] + (star ? ', so we print a star.' : ', so we print a space.'), {cond: {ok: star}});
+          sPut(c.S, star ? '*' : ' '); put(star ? Ls : Lsp, star ? 'A star.' : 'A space.');
+        }
+        c.mi = null;
+      } else {
+        var tx = rowText(MAN4, i, true); sPut(c.S, tx); x.j = 3;
+        put(Lc, 'Row ' + i + ' of ~man~: ~"' + tx + '"~.');
+      }
+      sPut(c.S, '\n'); put(Ln, 'The row is done: a new line.');
+      c.mrow = null;
+    }
+    c.grp = '';
+    put(P.at('return 0;'), 'The same man, but now the picture is data in a 2D array.');
+    return c.end();
+  }
+  /* version 07 · drawMan(x, y);  08 · eraseMan;  09 · drawMan(x, y, show) */
+  function t5Fn(v, ver) {
+    var c = ctx(); c.man = MAN4;
+    c.names = ['left', 'top', 'x', 'y'].concat(ver === 9 ? ['show'] : [], ['i', 'j']);
+    var blocks = [headB(v, false), BL, manB(MAN4, ver === 7), BL, drawB(ver === 9 ? 3 : 2, 4, 3, true), BL];
+    if (ver === 8) blocks.push(ERASE_B, BL);
+    var call1 = ver === 9 ? 'drawMan(left, top, 1);' : 'drawMan(left, top);';
+    var L = ['int left = 10, top = 3;', '', CLS5[v], call1];
+    if (ver > 7) L = L.concat(['fflush(stdout);', waitL(v, 2000), ver === 9 ? 'drawMan(left, top, 0);' : 'eraseMan(left, top);']);
+    L.push('gotoxy(1, top + 5);');
+    blocks.push(mainB(L), END);
+    var P = prog(blocks), mW = function () { return [['left', 10], ['top', 3]]; };
+    c.w = mW(); c.put(P, P.at('int left'), '~left = 10~ and ~top = 3~.');
+    sCls(c.S); c.put(P, P.at(CLS5[v]), 'Clear the screen.');
+    if (ver === 7) drawRun(c, P, {kind: 2, x: 10, y: 3, mode: 'row0', at: P.at(call1), W: mW});
+    else {
+      drawRun(c, P, {kind: ver === 9 ? 3 : 2, x: 10, y: 3, show: 1, mode: 'call', at: P.at(call1), W: mW,
+        say: ver === 9 ? '~drawMan(10, 3, 1)~: ~show~ is 1, so it draws him.' : '~drawMan(10, 3)~ draws him. Step 5 showed how.'});
+      c.w = mW(); c.put(P, P.at('fflush(stdout);'), 'There was no ~\\n~, so the stars may still wait in memory. ~fflush(stdout)~ puts them on the screen now.');
+      c.wait(2000); c.put(P, P.at(waitL(v, 2000)), waitSay(2000));
+      drawRun(c, P, {kind: ver === 9 ? 3 : 'e', x: 10, y: 3, show: 0, mode: 'row0', at: P.at(ver === 9 ? 'drawMan(left, top, 0);' : 'eraseMan(left, top);'), W: mW});
+    }
+    sGo(c.S, 1, 8); c.w = mW(); c.put(P, P.at('gotoxy(1, top + 5);'), 'Move the cursor below the picture. Then the prompt does not land on him.');
+    c.put(P, P.at('return 0;'), ver === 7 ? 'Row ~i~ of ~man~ went to line ~y + i~. Box ~j~ went to column ~x + j~.'
+      : ver === 8 ? 'Drawn, then erased. ~drawMan~ and ~eraseMan~ are almost the same.' : 'One function does both jobs.');
+    return c.end();
+  }
+  /* version 10 · one man moves;  11 (and the student's own picture) · two of them */
+  function t5Walk(v, two, M) {
+    M = M || MAN4;
+    var R = M.length, C = M[0].length, left = two ? 2 : 10, n = two ? Math.floor((20 - C) / 2) + 1 : 10;
+    var c = ctx(); c.man = M;
+    var body = ['drawMan(left + step, top, 1);'];
+    if (two) body.push('drawMan(left + 20 - step, top, 1);');
+    body = body.concat(['fflush(stdout);', waitL(v, 300), 'drawMan(left + step, top, 0);']);
+    if (two) body.push('drawMan(left + 20 - step, top, 0);');
+    var P = prog([headB(v, false), BL, manB(M, !!M.own), BL, drawB(3, R, C, false), BL,
+      mainB(['int left = ' + left + ', top = 3, step;', '', CLS5[v], 'for (step = 0; step < ' + n + '; step++) {'].concat(ind(4, body), ['}', 'gotoxy(1, top + ' + (R + 1) + ');'])), END]);
+    var st = null, mW = function () { return [['left', left], ['top', 3], ['step', q(st)]]; };
+    var put = function (l, say, ex) { c.w = mW(); c.put(P, l, say, ex); };
+    put(P.at('int left'), '~left = ' + left + '~, ~top = 3~.');
+    sCls(c.S); put(P.at(CLS5[v]), 'Clear the screen.');
+    var Lf = P.at('for (step');
+    for (var s = 0; ; s++) {
+      st = s; var ok = s < n; c.grp = ok ? 'move ' + (s + 1) : '';
+      put(Lf, loopSay('step', s, s === 0, n), {cond: {ok: ok}});
+      if (!ok) break;
+      drawRun(c, P, {kind: 3, x: left + s, y: 3, show: 1, mode: 'call', at: P.at('drawMan(left + step, top, 1);'), W: mW, say: 'Draw ' + (two ? 'the first one' : 'him') + ' at column ~left + step = ' + (left + s) + '~.'});
+      if (two) drawRun(c, P, {kind: 3, x: left + 20 - s, y: 3, show: 1, mode: 'call', at: P.at('drawMan(left + 20 - step, top, 1);'), W: mW, say: 'Draw the second one at column ~left + 20 - step = ' + (left + 20 - s) + '~.'});
+      put(P.at('fflush(stdout);'), 'Put everything on the screen now.');
+      c.wait(300); put(P.at(waitL(v, 300)), waitSay(300));
+      drawRun(c, P, {kind: 3, x: left + s, y: 3, show: 0, mode: 'call', at: P.at('drawMan(left + step, top, 0);'), W: mW, say: 'Erase ' + (two ? 'the first one.' : 'him.')});
+      if (two) drawRun(c, P, {kind: 3, x: left + 20 - s, y: 3, show: 0, mode: 'call', at: P.at('drawMan(left + 20 - step, top, 0);'), W: mW, say: 'Erase the second one.'});
+    }
+    c.grp = '';
+    sGo(c.S, 1, 3 + R + 1); put(P.at('gotoxy(1, top'), 'Move the cursor below the picture.');
+    put(P.at('return 0;'), two ? 'They walked toward each other and stopped one column apart.' : 'He walked from column 10 to column 19.');
+    return c.end();
+  }
+  /* version 12 · the story: walking legs, a ground line, they meet and say Hi! */
+  function t5Story(v) {
+    var c = ctx(); c.man = MAN5;
+    c.names = ['left', 'top', 'step', 'legRow', 'x', 'y', 'show', 'legs', 'i', 'j', 'r'];
+    var body = ['drawMan(left + step, top, 1, legRow);', 'drawMan(left + 20 - step, top, 1, legRow);', 'fflush(stdout);', waitL(v, 300),
+      'if (step < 8) {', '    drawMan(left + step, top, 0, legRow);', '    drawMan(left + 20 - step, top, 0, legRow);', '}',
+      'if (legRow == 3)      /* switch the legs for the next move */', '    legRow = 4;', 'else', '    legRow = 3;'];
+    var P = prog([headB(v, false), BL, manB(MAN5, true, [null, null, null, '/* row 3: legs apart    */', '/* row 4: legs together */']), BL, drawB(4, 4, 3, true), BL,
+      mainB(['int left = 2, top = 3, step, legRow = 3;', '', CLS5[v], 'gotoxy(1, top + 4);', 'printf("________________________");', 'for (step = 0; step < 9; step++) {'].concat(ind(4, body),
+        ['}', 'gotoxy(left + 10, top - 1);', 'printf("Hi!");', 'gotoxy(1, top + 6);'])), END]);
+    var st = null, lr = 3, mW = function () { return [['left', 2], ['top', 3], ['step', q(st)], ['legRow', lr]]; };
+    var put = function (l, say, ex) { c.w = mW(); c.put(P, l, say, ex); };
+    put(P.at('int left'), '~left = 2~, ~top = 3~. ~legRow = 3~: the first move uses row 3 of ~man~ for the legs.');
+    sCls(c.S); put(P.at(CLS5[v]), 'Clear the screen.');
+    sGo(c.S, 1, 7); put(P.at('gotoxy(1, top + 4);'), 'Go to line 7, just under their feet.');
+    sPut(c.S, '________________________'); put(P.at('printf("____'), 'Draw the ground.');
+    var Lf = P.at('for (step');
+    for (var s = 0; ; s++) {
+      st = s; var ok = s < 9, legs = lr; c.grp = ok ? 'move ' + (s + 1) : '';
+      put(Lf, loopSay('step', s, s === 0, 9), {cond: {ok: ok}});
+      if (!ok) break;
+      var a1 = P.at('drawMan(left + step, top, 1, legRow);'), a2 = P.at('drawMan(left + 20 - step, top, 1, legRow);');
+      if (s === 0) drawRun(c, P, {kind: 4, x: 2, y: 3, show: 1, legs: legs, mode: 'row0', at: a1, W: mW});
+      else drawRun(c, P, {kind: 4, x: 2 + s, y: 3, show: 1, legs: legs, mode: 'call', at: a1, W: mW,
+        say: 'Draw the first man at column ' + (2 + s) + '. ~legRow = ' + legs + '~: legs from row ' + legs + (legs === 3 ? ', apart.' : ', together.')});
+      drawRun(c, P, {kind: 4, x: 22 - s, y: 3, show: 1, legs: legs, mode: 'call', at: a2, W: mW, say: 'Draw the second man at column ' + (22 - s) + ', with the same legs.'});
+      put(P.at('fflush(stdout);'), 'Put everything on the screen now.');
+      c.wait(300); put(P.at(waitL(v, 300)), waitSay(300));
+      var more = s < 8;
+      put(P.at('if (step < 8)'), 'Is ~' + s + ' < 8~? ' + (more ? 'Yes: erase them before the next move.' : 'No: this is the last move, so they stay.'), {cond: {ok: more}});
+      if (more) {
+        drawRun(c, P, {kind: 4, x: 2 + s, y: 3, show: 0, legs: legs, mode: 'call', at: P.at('drawMan(left + step, top, 0, legRow);'), W: mW, say: 'Erase the first man.'});
+        drawRun(c, P, {kind: 4, x: 22 - s, y: 3, show: 0, legs: legs, mode: 'call', at: P.at('drawMan(left + 20 - step, top, 0, legRow);'), W: mW, say: 'Erase the second man.'});
+      }
+      var three = lr === 3;
+      put(P.at('if (legRow == 3)'), 'Is ~legRow == 3~? ' + (three ? 'Yes.' : 'No.'), {cond: {ok: three}});
+      lr = three ? 4 : 3;
+      put(P.at(three ? 'legRow = 4;' : 'legRow = 3;', 'if (legRow == 3)'), '~legRow = ' + lr + '~: the next move uses the other legs.');
+    }
+    c.grp = '';
+    sGo(c.S, 12, 2); put(P.at('gotoxy(left + 10, top - 1);'), 'Go to column 12, line 2: above the space between them.');
+    sPut(c.S, 'Hi!'); put(P.at('printf("Hi!");'), 'They say Hi!');
+    sGo(c.S, 1, 9); put(P.at('gotoxy(1, top + 6);'), 'Move the cursor below the ground.');
+    put(P.at('return 0;'), 'The end. Every picture came from one 2D array.');
+    return c.end();
+  }
+  var t5One = function (v) { return t5Goto(v, false); }, t5Each = function (v) { return t5Goto(v, true); };
+  var t5Same = function (v) { return t5Loop(v, false, false, false); }, t5Trail = function (v) { return t5Loop(v, true, true, false); }, t5Erase = function (v) { return t5Loop(v, true, true, true); };
+  var t5Draw = function (v) { return t5Fn(v, 7); }, t5EraseFn = function (v) { return t5Fn(v, 8); }, t5Show = function (v) { return t5Fn(v, 9); };
+  var t5Move = function (v) { return t5Walk(v, false); }, t5Two = function (v, M) { return t5Walk(v, true, M); };
+
   return {parseList: parseList, parseSize: parseSize, parseGrid: parseGrid, mat: mat,
     t1Use: t1Use, t1PrintRow: t1PrintRow, t1PrintAll: t1PrintAll, t1PrintNL: t1PrintNL, t1Read: t1Read, t1Print: t1Print, t2RowCol: t2RowCol, t2Diag: t2Diag, t2Diff: t2Diff,
-    t3Add: t3Add, t3ColSum: t3ColSum, t3Trans: t3Trans, t4RowSum: t4RowSum, t4Mirror: t4Mirror, t4Pal: t4Pal, t4Sort: t4Sort};
+    t3Add: t3Add, t3ColSum: t3ColSum, t3Trans: t3Trans, t4RowSum: t4RowSum, t4Mirror: t4Mirror, t4Pal: t4Pal, t4PalPrint: t4PalPrint, t4ColMax: t4ColMax, t4Sort: t4Sort,
+    TW: TW, TH: TH, termRun: termRun, MAN4: MAN4, t5Pic: t5Pic, t5One: t5One, t5Each: t5Each, t5Same: t5Same, t5Trail: t5Trail, t5Erase: t5Erase,
+    t5Arr: t5Arr, t5Draw: t5Draw, t5EraseFn: t5EraseFn, t5Show: t5Show, t5Move: t5Move, t5Two: t5Two, t5Story: t5Story};
 })();
 if (typeof module !== 'undefined') module.exports = LOGIC;
 
@@ -2250,7 +2869,7 @@ function drawTable(v, cw) {
   var cx = function (j) { return x0 + j * (cw + GAP) + cw / 2; };
   if (v.ci !== null && v.ci !== undefined) s += chipR(x0 - 26, y0 + v.ci * (cw + GAP) + cw / 2, 'i', 'i');
   s += chips([{at: v.cj, label: 'j', kind: 'j'}, {at: v.ck, label: 'k', kind: 'k'}], cx, y0 - 38, true);
-  if (v.sums) v.sums.forEach(function (sm, j) { if (sm !== null) s += txt(cx(j), H + 10, 'sum ' + sm, {fs: 11, fw: 800, fill: '#047857', sans: true}); });
+  if (v.sums) v.sums.forEach(function (sm, j) { if (sm !== null) s += txt(cx(j), H + 10, (v.sumLab || 'sum ') + sm, {fs: 11, fw: 800, fill: '#047857', sans: true}); });
   return svg(W, H + (v.sums ? 22 : 0), s);
 }
 /* the array-of-arrays view: every row is its own 1D array */
@@ -2460,12 +3079,14 @@ S.trans = mount('#sim-trans', {name: 'Transpose', plate: 'a and b', console: tru
 S.rowsum = mount('#sim-rowsum', {name: 'Sum of each row', plate: 'a as an array of arrays', console: true, build: function () { return LOGIC.t4RowSum(IN[4].R, IN[4].C, IN[4].v); }, draw: drawRows});
 S.mirror = mount('#sim-mirror', {name: 'Mirror every row', plate: 'a as an array of arrays', console: true, build: function () { return LOGIC.t4Mirror(IN[4].R, IN[4].C, IN[4].v); }, draw: drawRows});
 S.pal = mount('#sim-pal', {name: 'Palindrome rows', plate: 'a as an array of arrays', console: true, build: function () { return LOGIC.t4Pal(IN[4].R, IN[4].C, IN[4].v); }, draw: drawRows});
+S.palprint = mount('#sim-palprint', {name: 'Print the palindromic rows', plate: 'a as an array of arrays', console: true, build: function () { return LOGIC.t4PalPrint(IN[4].R, IN[4].C, IN[4].v); }, draw: drawRows});
+S.colmax = mount('#sim-colmax', {name: 'The largest in each column', plate: 'a as a table', console: true, build: function () { return LOGIC.t4ColMax(IN[4].R, IN[4].C, IN[4].v); }, draw: function (v) { return drawTable(v); }});
 S.sort = mount('#sim-sort', {name: 'Sort every row', plate: 'a as an array of arrays', console: true, build: function () { return LOGIC.t4Sort(IN[4].R, IN[4].C, IN[4].v); }, draw: drawRows});
 function legend(items) {
   return '<div class="legend">' + items.map(function (it) { var c = CELL[it[0]]; return '<span><i style="background:' + c[0] + ';border-color:' + c[1] + '"></i>' + it[1] + '</span>'; }).join('') + '</div>';
 }
 
-var GROUPS = {1: ['read', 'prow', 'pall', 'pnl', 'print'], 2: ['rowcol', 'main', 'anti', 'diff'], 3: ['add', 'colsum', 'trans'], 4: ['rowsum', 'mirror', 'pal', 'sort']};
+var GROUPS = {1: ['read', 'prow', 'pall', 'pnl', 'print'], 2: ['rowcol', 'main', 'anti', 'diff'], 3: ['add', 'colsum', 'trans'], 4: ['rowsum', 'mirror', 'pal', 'palprint', 'colmax', 'sort']};
 function reloadTab(t) {
   if (!readTab(t)) return;
   if (t === 1) { W1.vpick = null; W1.flat = false; paintViews(); paintMem(); paintArea(); }
@@ -2484,6 +3105,112 @@ $$('.pre[data-g]').forEach(function (b) {
     reloadTab(t);
   });
 });
+
+/* ---------- tab 5: the terminal, and man beside it ---------- */
+function drawT5(v) {
+  var TW = LOGIC.TW, TH = LOGIC.TH, cw = 13, ch = 22, mcw = 28, s = '';
+  var mR = v.man ? v.man.length : 0, mC = v.man ? v.man[0].length : 0;
+  var mx = 26, my = 46, tx = v.man ? mx + mC * (mcw + GAP) + 54 : 24, ty = 30;
+  if (v.man) {
+    s += txt(mx, my - 30, 'man', {fs: 13, fw: 800, anchor: 'start', fill: '#475569'});
+    for (var i = 0; i < mR; i++) {
+      var y = my + i * (mcw + GAP);
+      s += txt(mx - 9, y + mcw / 2, i, {fs: 10, fill: v.mrow === i ? '#4f46e5' : '#94a3b8', fw: v.mrow === i ? 800 : 700, anchor: 'end'});
+      for (var j = 0; j < mC; j++) {
+        var on = v.mi && v.mi[0] === i && v.mi[1] === j;
+        s += box(mx + j * (mcw + GAP), y, mcw, v.man[i][j], on ? 'look' : v.mrow === i ? 'a' : v.man[i][j] ? 'hit' : 'def');
+      }
+    }
+    for (var c = 0; c < mC; c++) s += txt(mx + c * (mcw + GAP) + mcw / 2, my - 9, c, {fs: 10, fill: '#94a3b8'});
+  }
+  var W = tx + TW * cw + 10, H = Math.max(ty + TH * ch + 8, v.man ? my + mR * (mcw + GAP) + 6 : 0);
+  s += '<rect x="' + (tx - 6) + '" y="' + (ty - 4) + '" width="' + (TW * cw + 12) + '" height="' + (TH * ch + 8) + '" rx="8" fill="#0f172a"/>';
+  for (var cc = 1; cc <= TW; cc++) if (cc === 1 || cc % 5 === 0) s += txt(tx + (cc - 1) * cw + cw / 2, ty - 13, cc, {fs: 9, fill: '#94a3b8'});
+  for (var r = 0; r < TH; r++) s += txt(tx - 12, ty + r * ch + ch / 2, r + 1, {fs: 9, fill: '#94a3b8', anchor: 'end'});
+  (v.hot || []).forEach(function (h) { s += '<rect x="' + (tx + h[1] * cw) + '" y="' + (ty + h[0] * ch + 1) + '" width="' + cw + '" height="' + (ch - 2) + '" fill="#f59e0b" opacity=".38"/>'; });
+  if (v.r >= 0 && v.r < TH && v.c >= 0 && v.c < TW)
+    s += '<rect x="' + (tx + v.c * cw + 1) + '" y="' + (ty + v.r * ch + 2) + '" width="' + (cw - 2) + '" height="' + (ch - 4) + '" fill="#fbbf24" opacity=".55"/>';
+  v.g.forEach(function (row, r) {
+    for (var k = 0; k < row.length; k++) if (row[k] !== ' ') s += txt(tx + k * cw + cw / 2, ty + r * ch + ch / 2 + 1, row[k], {fs: 16, fw: 800, fill: '#e2e8f0'});
+  });
+  return svg(W, H, s);
+}
+var OS5 = 'a';
+try { if (localStorage.getItem('arrays-1112-os') === 'w') OS5 = 'w'; } catch (e) {}
+var OWN = [[0, 1, 0], [1, 1, 1], [0, 1, 0], [1, 0, 1]];
+var T5 = [['5pic', 't5Pic', 'Print a picture', 'the terminal'], ['5one', 't5One', 'One gotoxy', 'the terminal'], ['5each', 't5Each', 'A gotoxy for each line', 'the terminal'],
+  ['5same', 't5Same', 'A loop: nothing moves', 'the terminal'], ['5trail', 't5Trail', 'Move: a trail', 'the terminal'], ['5erase', 't5Erase', 'Move: wait, then erase', 'the terminal'],
+  ['5arr', 't5Arr', 'Print man', 'man and the terminal'], ['5draw', 't5Draw', 'drawMan(x, y)', 'man and the terminal'], ['5erasefn', 't5EraseFn', 'drawMan and eraseMan', 'man and the terminal'],
+  ['5show', 't5Show', 'One function: show', 'man and the terminal'], ['5move', 't5Move', 'Move him', 'man and the terminal'], ['5two', 't5Two', 'Two men', 'man and the terminal'],
+  ['5story', 't5Story', 'The story', 'man and the terminal'], ['5own', 'own', 'Your picture', 'your man and the terminal']];
+T5.forEach(function (d) {
+  S[d[0]] = mount('#sim-' + d[0], {name: d[2], plate: d[3], play: 450, draw: drawT5,
+    build: d[1] === 'own' ? function () { return LOGIC.t5Two(OS5, Object.assign(OWN.map(function (r) { return r.slice(); }), {own: true})); }
+                          : function () { return LOGIC[d[1]](OS5); }});
+});
+/* real speed: show the screen during each wait, for as long as the program waits */
+var RUN = {};
+function runBox(key, id) {
+  id = id || 'run-' + key;
+  var host = $('#' + id); if (!host) return;
+  host.innerHTML = '<div class="runbox"><div class="rbbar"><button class="btn sm" type="button">▶ Run at real speed</button><span class="rbn"></span></div><div class="simfig"></div></div>';
+  var btn = $('button', host), fig = $('.simfig', host), n = $('.rbn', host), tm = null;
+  var F = function () { return S[key].steps.frames; };
+  function show(k) {
+    var f = F();
+    fig.innerHTML = drawT5({g: f[k].g, r: -1, c: -1, hot: []});
+    n.textContent = k === f.length - 1 ? 'the end' : 'screen ' + (k + 1) + ' of ' + (f.length - 1);
+  }
+  function stop(label) { clearTimeout(tm); tm = null; btn.textContent = label || '▶ Run at real speed'; }
+  btn.addEventListener('click', function () {
+    if (tm) { stop(); return; }
+    var k = 0; btn.textContent = '■ Stop';
+    (function tick() {
+      show(k);
+      if (k === F().length - 1) { tm = null; btn.textContent = '▶ Run again'; return; }
+      tm = setTimeout(function () { k++; tick(); }, F()[k].ms);
+    })();
+  });
+  RUN[id] = {reset: function () { stop(); show(0); }};
+  show(0);
+}
+['5trail', '5erase', '5move', '5two', '5story', '5own'].forEach(function (k) { runBox(k); });
+runBox('5story', 'run-5intro');
+function paintOS() { $$('#t5 .os button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-os') === OS5); }); }
+paintOS();
+$$('#t5 .os button').forEach(function (b) {
+  b.addEventListener('click', function () {
+    OS5 = b.getAttribute('data-os');
+    try { localStorage.setItem('arrays-1112-os', OS5); } catch (e) {}
+    paintOS();
+    T5.forEach(function (d) { S[d[0]].reload(); });
+    Object.keys(RUN).forEach(function (k) { RUN[k].reset(); });
+  });
+});
+/* step 9: click boxes to draw; R and C from 1 to 5 */
+function paintOwn() {
+  var R = OWN.length, C = OWN[0].length, cw = 44, x0 = 30, y0 = 26;
+  var s = gridAt({R: R, C: C, x0: x0, y0: y0, cw: cw, click: true, val: function (i, j) { return OWN[i][j]; },
+    kind: function (i, j) { return OWN[i][j] ? 'hit' : 'def'; }});
+  var pm = function (what, d, lab) { return '<button class="btn ghost sm" type="button" data-own="' + what + '" data-d="' + d + '" aria-label="' + lab + '">' + (d > 0 ? '+' : '−') + '</button>'; };
+  $('#w-own').innerHTML = '<div class="ownbar">rows ' + pm('R', -1, 'fewer rows') + '<span class="num">' + R + '</span>' + pm('R', 1, 'more rows') +
+    ' columns ' + pm('C', -1, 'fewer columns') + '<span class="num">' + C + '</span>' + pm('C', 1, 'more columns') +
+    '<button class="btn ghost sm" type="button" data-own="man">The man</button><button class="btn ghost sm" type="button" data-own="clear">Clear</button></div>' +
+    '<div class="simfig">' + svg(x0 + gridW(C, cw) + 16, y0 + R * (cw + GAP) + 4, s) + '</div>';
+}
+function ownChanged() { paintOwn(); S['5own'].reload(); RUN['run-5own'].reset(); }
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('#w-own [data-idx]');
+  if (b) { var p = b.getAttribute('data-idx').split(',').map(Number); OWN[p[0]][p[1]] = 1 - OWN[p[0]][p[1]]; ownChanged(); return; }
+  var o = e.target.closest('#w-own [data-own]'); if (!o) return;
+  var w = o.getAttribute('data-own'), d = +o.getAttribute('data-d'), R = OWN.length, C = OWN[0].length;
+  if (w === 'man') OWN = LOGIC.MAN4.map(function (r) { return r.slice(); });
+  else if (w === 'clear') OWN = OWN.map(function (r) { return r.map(function () { return 0; }); });
+  else if (w === 'R') { if (R + d < 1 || R + d > 5) return; if (d > 0) OWN.push(new Array(C).fill(0)); else OWN.pop(); }
+  else { if (C + d < 1 || C + d > 5) return; OWN.forEach(function (r) { if (d > 0) r.push(0); else r.pop(); }); }
+  ownChanged();
+});
+paintOwn();
 
 /* ---------- static code and practice ---------- */
 var SNIP = {
@@ -2511,7 +3238,7 @@ var PR = {
   69: ['Search In Matrix', CF + 'S', 'Codeforces'], 70: ['Matrix Addition', HR + 'matrix-addition-40', 'HackerRank'],
   71: ['Sum by Row-Column (use long long)', HR + 'sum-by-row-column', 'HackerRank'], 73: ['Equal or Not!', HR + 'equal-or-not-5', 'HackerRank'],
   74: ['Mirror Array', CF + 'W', 'Codeforces'], 75: ['Symmetric or Not!', HR + 'symmetric-or-not-2', 'HackerRank'],
-  76: ['Odd Row Sum', HR + 'odd-row-sum', 'HackerRank'], 77: ['Palindromic Rows', HR + 'palindromic-rows', 'HackerRank'],
+  76: ['Odd Row Sum', HR + 'odd-row-sum', 'HackerRank'], 77: ['Palindromic Rows', HR + 'palindromic-rows', 'HackerRank'], 78: ['Atleast one 1 columns only!', HR + 'binary-columns-only', 'HackerRank'],
   b1181: ['Line in Array', BEE + '1181_en.html', 'beecrowd'], b1182: ['Column in Array', BEE + '1182_en.html', 'beecrowd'],
   b1183: ['Above the Main Diagonal', BEE + '1183_en.html', 'beecrowd'], b1184: ['Below the Main Diagonal', BEE + '1184_en.html', 'beecrowd'],
   b1185: ['Above the Secondary Diagonal', BEE + '1185_en.html', 'beecrowd'], b1186: ['Below the Secondary Diagonal', BEE + '1186_en.html', 'beecrowd'],
@@ -2522,7 +3249,7 @@ var PR = {
   c263A: ['Beautiful Matrix', CFP + '263/A', 'Codeforces'], c1772B: ['Matrix Rotation', CFP + '1772/B', 'Codeforces']
 };
 /* tracksheet row of each ARR code (tracksheet/post_mid.py, first row 155) */
-var TROW = {61: 235, 62: 236, 63: 237, 69: 238, 70: 239, 64: 240, 65: 241, 66: 242, 67: 244, 68: 245, 74: 246, 73: 248, 75: 249, 76: 250, 71: 251, 77: 252};
+var TROW = {61: 235, 62: 236, 63: 237, 69: 238, 70: 239, 64: 240, 65: 241, 66: 242, 67: 244, 68: 245, 74: 246, 73: 248, 75: 249, 76: 250, 71: 251, 77: 252, 78: 253};
 var AHEAD = {b1187: 1, b1188: 1, b1189: 1, b1190: 1, b1435: 1, b1478: 1, b1557: 1, b1827: 1};
 $$('.practice[data-rows]').forEach(function (box) {
   var h = '<h3>Practice</h3><table class="ptbl"><tr><th>Row</th><th>Code</th><th>Problem</th><th>Judge</th></tr>';
@@ -2547,7 +3274,7 @@ document.addEventListener('keydown', function (e) {
   var t = document.activeElement;
   if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
-  if (/^[1-4]$/.test(e.key)) showTab(e.key);
+  if (/^[1-5]$/.test(e.key)) showTab(e.key);
 });
 paintNames(); paintViews(); paintMem(); paintInit(); paintArea();
 try { var saved = localStorage.getItem('arrays-1112-tab'); if (saved) showTab(saved); } catch (e) {}
